@@ -39,6 +39,7 @@ Production build serves from `/learn-dbt/` (GitHub Pages project site). After ev
 - **Terminal** — `dbt ls | run | build | test | seed | compile | source freshness`
 - **Meta** — `help`, `hint`, `levels`, `steps`, `show goal`, `hide goal`, `show solution`, `reset`, `undo`
 - **Coach** — Goal panel lists the official solution commands as a checklist; after each run the terminal prints `Next: …` (same pattern as learn-dvc)
+- **Celebration** — solving a level opens a success dialog with golf stats and share buttons for LinkedIn, X/Twitter, Facebook, plus a copyable permalink (`?level=<id>`)
 
 ### Selection grammar (the core curriculum)
 

@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   coachLine,
   createProject,
@@ -13,6 +13,9 @@ import { sandboxLevel } from '../levels/sandbox';
 import { DagView } from './DagView';
 import { Terminal } from './Terminal';
 import { layoutDag } from './layout';
+import { SolvedDialog } from './SolvedDialog';
+import type { SolvedInfo } from './SolvedDialog';
+import { levelIdFromSearch, loadSolvedLevels, markLevelSolved } from './share';
 
 type Mode = 'sandbox' | 'level';
 
@@ -25,23 +28,17 @@ interface Session {
   showHint: boolean;
   showLevels: boolean;
   showDialog: boolean;
-  solvedFlash: string | null;
+  solved: SolvedInfo | null;
   undoStack: ProjectState[];
 }
 
 function initialState(): Session {
-  return {
-    mode: 'sandbox',
-    level: sandboxLevel,
-    project: createProject(sandboxLevel.start),
-    history: [],
-    showGoal: false,
-    showHint: false,
-    showLevels: false,
-    showDialog: false,
-    solvedFlash: null,
-    undoStack: [],
-  };
+  const fromUrl = typeof window !== 'undefined' ? levelIdFromSearch(window.location.search) : null;
+  const lv =
+    (fromUrl && fromUrl !== 'sandbox' ? getLevel(fromUrl) : undefined) ??
+    (fromUrl === 'sandbox' ? sandboxLevel : undefined) ??
+    sandboxLevel;
+  return startLevelSession(lv);
 }
 
 function startLevelSession(level: LevelDef): Session {
@@ -54,20 +51,20 @@ function startLevelSession(level: LevelDef): Session {
     showHint: false,
     showLevels: false,
     showDialog: Boolean(level.dialog?.length),
-    solvedFlash: null,
+    solved: null,
     undoStack: [],
   };
 }
 
 export function App() {
   const [session, setSession] = useState<Session>(initialState);
+  const [solvedList, setSolvedList] = useState<string[]>(() =>
+    typeof window !== 'undefined' ? loadSolvedLevels() : [],
+  );
 
   const level = session.level ?? sandboxLevel;
   const project = session.project;
-  const goalLayout = useMemo(
-    () => layoutGoal(level),
-    [level],
-  );
+  const goalLayout = useMemo(() => layoutGoal(level), [level]);
   const liveLayout = useMemo(
     () => layoutDag(project, project.lastSelection),
     [project],
@@ -76,6 +73,13 @@ export function App() {
   const par = level.solution.length;
   const steps = useMemo(() => solutionProgress(project, level), [project, level]);
   const coach = useMemo(() => coachLine(project, level), [project, level]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const url = new URL(window.location.href);
+    url.searchParams.set('level', level.id);
+    window.history.replaceState({}, '', url.toString());
+  }, [level.id]);
 
   const pushLog = useCallback((kind: ProjectState['logs'][number]['kind'], text: string) => {
     setSession((s) => ({
@@ -91,7 +95,7 @@ export function App() {
     (raw: string): boolean => {
       const cmd = raw.trim().toLowerCase();
       if (cmd === 'levels') {
-        setSession((s) => ({ ...s, showLevels: true, showGoal: false }));
+        setSession((s) => ({ ...s, showLevels: true }));
         return true;
       }
       if (cmd === 'hint') {
@@ -120,7 +124,10 @@ export function App() {
             logs: [
               ...s.project.logs,
               { kind: 'meta' as const, text: formatSteps({ ...s.project, solved: true }, level) },
-              { kind: 'meta' as const, text: 'Official solution above. Run it yourself — watching is not learning.' },
+              {
+                kind: 'meta' as const,
+                text: 'Official solution above. Run it yourself — watching is not learning.',
+              },
               { kind: 'meta' as const, text: `solution: ${level.solution.join('; ')}` },
             ],
           },
@@ -135,7 +142,7 @@ export function App() {
             ...s,
             project: restartFromSpec(base.start),
             undoStack: [],
-            solvedFlash: null,
+            solved: null,
           };
         });
         return true;
@@ -175,20 +182,28 @@ export function App() {
           logs.push({ kind: 'meta' as const, text: 'All solution steps met.' });
         }
         const project: ProjectState = { ...result.project, logs };
-        const solvedFlash =
-          project.solved && !s.project.solved
-            ? `Solved ${lv.name} in ${project.commandCount} command(s)${par ? ` (par ${par})` : ''}`
-            : s.solvedFlash;
+        const justSolved = project.solved && !s.project.solved && lv.id !== 'sandbox';
+        if (justSolved) markLevelSolved(lv.id);
         return {
           ...s,
           project,
           history,
           undoStack,
-          solvedFlash,
+          solved: justSolved
+            ? {
+                level: lv,
+                commands: project.commandCount,
+                par: lv.solution.length || undefined,
+              }
+            : s.solved,
         };
       });
+      // persist progress list for levels browser badges
+      if (typeof window !== 'undefined') {
+        setSolvedList(loadSolvedLevels());
+      }
     },
-    [runMeta, par],
+    [runMeta],
   );
 
   const loadLevel = (id: string) => {
@@ -199,7 +214,15 @@ export function App() {
 
   const goNext = () => {
     const id = nextLevelId(level.id);
-    if (id) loadLevel(id);
+    if (!id) {
+      setSession((s) => ({ ...s, solved: null }));
+      return;
+    }
+    loadLevel(id);
+  };
+
+  const replay = () => {
+    setSession((s) => startLevelSession(s.level ?? sandboxLevel));
   };
 
   return (
@@ -218,7 +241,11 @@ export function App() {
           </span>
         </div>
         <div className="top-actions">
-          <button type="button" className="btn" onClick={() => setSession((s) => ({ ...s, showLevels: true }))}>
+          <button
+            type="button"
+            className="btn"
+            onClick={() => setSession((s) => ({ ...s, showLevels: true }))}
+          >
             Levels
           </button>
           <button type="button" className="btn" onClick={() => onRun('hint')}>
@@ -240,21 +267,6 @@ export function App() {
       <div className="workspace">
         <main className="canvas-panel">
           <DagView layout={liveLayout} title="Project DAG" />
-          {session.solvedFlash ? (
-            <div className="solved-banner" role="status">
-              <span>{session.solvedFlash}</span>
-              <button type="button" className="btn btn-accent" onClick={goNext}>
-                Next level
-              </button>
-              <button
-                type="button"
-                className="btn"
-                onClick={() => setSession((s) => ({ ...s, solvedFlash: null }))}
-              >
-                Dismiss
-              </button>
-            </div>
-          ) : null}
         </main>
 
         <aside className="side-panel">
@@ -300,6 +312,16 @@ export function App() {
       </div>
 
       <Terminal logs={project.logs} onRun={onRun} history={session.history} />
+
+      {session.solved ? (
+        <SolvedDialog
+          info={session.solved}
+          hasNext={Boolean(nextLevelId(session.solved.level.id))}
+          onNext={goNext}
+          onReplay={replay}
+          onDismiss={() => setSession((s) => ({ ...s, solved: null }))}
+        />
+      ) : null}
 
       {session.showDialog && level.dialog?.length ? (
         <div className="modal" role="dialog" aria-modal="true">
@@ -348,11 +370,18 @@ export function App() {
                     <button
                       key={l.id}
                       type="button"
-                      className={`level-row${l.id === level.id ? ' is-current' : ''}`}
+                      className={`level-row${l.id === level.id ? ' is-current' : ''}${
+                        solvedList.includes(l.id) ? ' is-solved' : ''
+                      }`}
                       onClick={() => loadLevel(l.id)}
                     >
-                      <span className="lr-name">{l.name}</span>
-                      <span className="lr-about">{l.objective.split('\n')[0].slice(0, 80)}</span>
+                      <span className="lr-name">
+                        {solvedList.includes(l.id) ? '✓ ' : ''}
+                        {l.name}
+                      </span>
+                      <span className="lr-about">
+                        {l.objective.split('\n')[0].slice(0, 80)}
+                      </span>
                     </button>
                   ))}
               </div>
@@ -365,7 +394,6 @@ export function App() {
 }
 
 function layoutGoal(level: LevelDef) {
-  // Goal DAG = start graph, but show expected built nodes as success.
   const project = createProject(level.start);
   const expected = level.goal.built ?? [];
   const mode = level.goal.builtMode ?? 'exactly';
