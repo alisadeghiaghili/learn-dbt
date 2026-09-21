@@ -1,5 +1,7 @@
 # learn-dbt
 
+**Live app:** https://alisadeghiaghili.github.io/learn-dbt/
+
 An interactive dbt visualization and tutorial — the same product shape as
 [learnGitBranching](https://github.com/pcottle/learnGitBranching), rebuilt for
 dbt operations.
@@ -27,6 +29,8 @@ npm test        # engine + level solutions
 npm run typecheck
 npm run build
 ```
+
+Production build serves from `/learn-dbt/` (GitHub Pages project site). After every push to `main`, GitHub Actions runs tests and deploys `dist/` to Pages.
 
 ## What you can do in the app
 
