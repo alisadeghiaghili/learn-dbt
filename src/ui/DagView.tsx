@@ -5,6 +5,8 @@ interface Props {
   layout: DagLayout;
   title?: string;
   ghost?: boolean;
+  /** When true, success nodes pulse green (level solved). */
+  celebrating?: boolean;
 }
 
 /**
@@ -14,14 +16,15 @@ interface Props {
  *   layout: Computed node/edge positions.
  *   title: Optional panel title.
  *   ghost: When true, render as a dim goal outline.
+ *   celebrating: Pulse successful nodes during the solve celebration.
  * Returns:
  *   React SVG element.
  */
-export function DagView({ layout, title, ghost = false }: Props) {
+export function DagView({ layout, title, ghost = false, celebrating = false }: Props) {
   const pos = new Map(layout.nodes.map((n) => [n.id, n]));
 
   return (
-    <div className={`dag-wrap${ghost ? ' dag-ghost' : ''}`}>
+    <div className={`dag-wrap${ghost ? ' dag-ghost' : ''}${celebrating ? ' dag-party' : ''}`}>
       {title ? <div className="dag-title">{title}</div> : null}
       <svg
         className="dag-svg"
@@ -75,8 +78,12 @@ export function DagView({ layout, title, ghost = false }: Props) {
                 : n.status === 'skipped'
                   ? 'is-skip'
                   : 'is-pending';
+          const party = celebrating && n.status === 'success' ? ' is-party' : '';
           return (
-            <g key={n.id} className={`dag-node ${statusClass}${n.selected ? ' is-sel' : ''}`}>
+            <g
+              key={n.id}
+              className={`dag-node ${statusClass}${n.selected ? ' is-sel' : ''}${party}`}
+            >
               <rect
                 x={n.x}
                 y={n.y}
@@ -85,23 +92,13 @@ export function DagView({ layout, title, ghost = false }: Props) {
                 rx={8}
                 fill="var(--panel)"
                 stroke={n.selected ? 'var(--accent)' : fill}
-                strokeWidth={n.selected ? 2.5 : 1.5}
+                strokeWidth={n.selected || party ? 2.5 : 1.5}
               />
               <rect x={n.x} y={n.y} width={6} height={44} rx={2} fill={fill} />
-              <text
-                x={n.x + 14}
-                y={n.y + 18}
-                className="dag-label"
-                fill="var(--ink)"
-              >
+              <text x={n.x + 14} y={n.y + 18} className="dag-label" fill="var(--ink)">
                 {truncate(n.label, 16)}
               </text>
-              <text
-                x={n.x + 14}
-                y={n.y + 34}
-                className="dag-meta"
-                fill="var(--muted)"
-              >
+              <text x={n.x + 14} y={n.y + 34} className="dag-meta" fill="var(--muted)">
                 {n.materialization}
                 {n.status === 'success' ? ' · built' : n.status === 'error' ? ' · error' : ''}
               </text>

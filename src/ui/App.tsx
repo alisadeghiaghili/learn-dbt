@@ -265,8 +265,12 @@ export function App() {
       </header>
 
       <div className="workspace">
-        <main className="canvas-panel">
-          <DagView layout={liveLayout} title="Project DAG" />
+        <main className={`canvas-panel${session.solved ? ' is-celebrating' : ''}`}>
+          <DagView
+            layout={liveLayout}
+            title="Project DAG"
+            celebrating={Boolean(session.solved)}
+          />
         </main>
 
         <aside className="side-panel">

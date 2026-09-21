@@ -21,9 +21,10 @@ await page.fill('#term-input', 'dbt run --select stg_orders');
 await page.getByRole('button', { name: 'Run' }).click();
 await page.waitForSelector('.solved-modal', { timeout: 5000 });
 const modal = await page.locator('.solved-card').innerText();
+const modalLc = modal.toLowerCase();
 console.log(modal);
-for (const needle of ['Level solved', 'Build one model', 'LinkedIn', 'X / Twitter', 'Facebook', 'Copy link', 'Next level']) {
-  if (!modal.includes(needle)) throw new Error(`missing in dialog: ${needle}`);
+for (const needle of ['level solved', 'build one model', 'linkedin', 'x / twitter', 'facebook', 'copy link', 'next level']) {
+  if (!modalLc.includes(needle)) throw new Error(`missing in dialog: ${needle}`);
 }
 const li = await page.locator('a.share-li').getAttribute('href');
 const tw = await page.locator('a.share-x').getAttribute('href');

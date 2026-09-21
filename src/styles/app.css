@@ -474,33 +474,126 @@ body {
 
 /* ----- celebration / share ----- */
 .solved-modal {
-  background: rgba(0, 0, 0, 0.62);
+  background: rgba(2, 6, 16, 0.72);
+  z-index: 40;
+}
+
+.solved-modal.is-party {
+  background:
+    radial-gradient(ellipse at center, rgba(34, 197, 94, 0.12), transparent 55%),
+    rgba(2, 6, 16, 0.78);
+}
+
+.confetti-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.confetti-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 
 .solved-card {
   position: relative;
-  max-width: 520px;
-  overflow: hidden;
-  border-color: rgba(34, 197, 94, 0.35);
+  z-index: 2;
+  max-width: 540px;
+  overflow: visible;
+  border-color: rgba(34, 197, 94, 0.45);
+  box-shadow:
+    0 0 0 1px rgba(34, 197, 94, 0.15),
+    0 24px 80px rgba(0, 0, 0, 0.55);
+  background:
+    linear-gradient(180deg, rgba(34, 197, 94, 0.08), transparent 40%),
+    var(--panel);
+}
+
+.party-badge {
+  position: relative;
+  width: 72px;
+  height: 72px;
+  margin: -8px auto 12px;
+  display: grid;
+  place-items: center;
+}
+
+.party-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid rgba(34, 197, 94, 0.45);
+}
+
+.party-medal {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: linear-gradient(145deg, #34d399, #166534);
+  border: 2px solid #86efac;
+  display: grid;
+  place-items: center;
+  box-shadow: 0 0 24px rgba(34, 197, 94, 0.45);
+}
+
+.party-check {
+  width: 14px;
+  height: 24px;
+  border-right: 3px solid #052e16;
+  border-bottom: 3px solid #052e16;
+  transform: rotate(45deg) translate(-2px, -2px);
 }
 
 .solved-kicker {
   font-family: var(--mono);
-  font-size: 11px;
-  letter-spacing: 0.08em;
+  font-size: 12px;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--ok);
   margin-bottom: 6px;
+  text-align: center;
 }
 
-.solved-card h2 {
+.solved-card h2,
+.party-title {
   margin: 0 0 8px;
   color: var(--ink);
+  text-align: center;
+  font-size: 26px;
+  letter-spacing: -0.02em;
 }
 
 .solved-sub {
   margin: 0 0 6px;
   color: var(--ink);
+  text-align: center;
+}
+
+.party-line {
+  margin: 0 0 16px;
+  text-align: center;
+  color: var(--staging);
+  font-family: var(--mono);
+  font-size: 13px;
+}
+
+.golf-badge {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.golf-badge.is-best {
+  border-color: rgba(251, 191, 36, 0.6);
+  color: var(--intermediate);
+  background: rgba(251, 191, 36, 0.1);
 }
 
 .solved-objective {
@@ -514,7 +607,7 @@ body {
   border-radius: 8px;
   padding: 12px;
   margin-bottom: 16px;
-  background: var(--bg);
+  background: rgba(10, 15, 26, 0.85);
 }
 
 .share-title {
@@ -567,55 +660,21 @@ body {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+  justify-content: center;
 }
 
-.confetti {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  overflow: hidden;
+.btn-party {
+  min-height: 44px;
+  padding: 10px 18px;
+  font-size: 13px;
 }
 
-.confetti span {
-  position: absolute;
-  top: -8px;
-  width: 8px;
-  height: 12px;
-  opacity: 0.85;
-  border-radius: 1px;
+.canvas-panel.is-celebrating {
+  box-shadow: inset 0 0 0 1px rgba(34, 197, 94, 0.25);
 }
 
-.confetti span:nth-child(1) { left: 8%; background: var(--accent); }
-.confetti span:nth-child(2) { left: 22%; background: var(--ok); }
-.confetti span:nth-child(3) { left: 38%; background: var(--source); }
-.confetti span:nth-child(4) { left: 52%; background: var(--intermediate); }
-.confetti span:nth-child(5) { left: 66%; background: var(--mart); }
-.confetti span:nth-child(6) { left: 78%; background: var(--accent); }
-.confetti span:nth-child(7) { left: 88%; background: var(--staging); }
-.confetti span:nth-child(8) { left: 94%; background: var(--ok); }
-
-@media (prefers-reduced-motion: no-preference) {
-  .confetti span {
-    animation: confetti-fall 1.8s ease-in infinite;
-  }
-  .confetti span:nth-child(2) { animation-delay: 0.15s; }
-  .confetti span:nth-child(3) { animation-delay: 0.3s; }
-  .confetti span:nth-child(4) { animation-delay: 0.05s; }
-  .confetti span:nth-child(5) { animation-delay: 0.4s; }
-  .confetti span:nth-child(6) { animation-delay: 0.22s; }
-  .confetti span:nth-child(7) { animation-delay: 0.35s; }
-  .confetti span:nth-child(8) { animation-delay: 0.12s; }
-
-  @keyframes confetti-fall {
-    0% {
-      transform: translateY(0) rotate(0deg);
-      opacity: 0.9;
-    }
-    100% {
-      transform: translateY(220px) rotate(220deg);
-      opacity: 0;
-    }
-  }
+.dag-node.is-party rect {
+  stroke: var(--ok) !important;
 }
 
 .lr-name {
@@ -644,6 +703,59 @@ body {
       filter: drop-shadow(0 0 10px rgba(255, 107, 53, 0.7));
     }
   }
+
+  .party-in {
+    animation: party-pop 0.55s cubic-bezier(0.2, 1.4, 0.35, 1) both;
+  }
+
+  @keyframes party-pop {
+    0% {
+      transform: scale(0.72) translateY(28px);
+      opacity: 0;
+    }
+    60% {
+      transform: scale(1.04) translateY(-4px);
+      opacity: 1;
+    }
+    100% {
+      transform: scale(1) translateY(0);
+      opacity: 1;
+    }
+  }
+
+  .party-ring {
+    animation: ring-expand 1.2s ease-out infinite;
+  }
+
+  @keyframes ring-expand {
+    0% {
+      transform: scale(0.85);
+      opacity: 0.9;
+    }
+    100% {
+      transform: scale(1.35);
+      opacity: 0;
+    }
+  }
+
+  .dag-node.is-party rect {
+    animation: node-party 0.7s ease-in-out infinite alternate;
+  }
+
+  @keyframes node-party {
+    from {
+      filter: drop-shadow(0 0 4px rgba(34, 197, 94, 0.45));
+    }
+    to {
+      filter: drop-shadow(0 0 14px rgba(34, 197, 94, 0.95));
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .party-in {
+    animation: none;
+  }
 }
 
 /* ----- responsive ----- */
@@ -668,5 +780,10 @@ body {
 
   .level-row {
     grid-template-columns: 1fr;
+  }
+
+  .solved-card h2,
+  .party-title {
+    font-size: 22px;
   }
 }

@@ -1,6 +1,8 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { LevelDef } from '../engine/types';
 import { buildShareLinks } from './share';
+import { ConfettiCanvas } from './ConfettiCanvas';
+import { playVictoryFanfare } from './celebrate';
 
 export interface SolvedInfo {
   level: LevelDef;
@@ -18,7 +20,7 @@ interface Props {
 }
 
 /**
- * Level-solved celebration dialog with social share (LinkedIn, X, Facebook).
+ * Level-solved celebration dialog: party entrance, confetti, fanfare, social share.
  *
  * Args:
  *   info: Solved level metadata.
@@ -32,6 +34,9 @@ interface Props {
  */
 export function SolvedDialog({ info, hasNext, onNext, onReplay, onDismiss, baseUrl }: Props) {
   const [copied, setCopied] = useState(false);
+  const [muted, setMuted] = useState(false);
+  const [pulse, setPulse] = useState(0);
+
   const share = useMemo(
     () =>
       buildShareLinks({
@@ -44,6 +49,11 @@ export function SolvedDialog({ info, hasNext, onNext, onReplay, onDismiss, baseU
       }),
     [info, baseUrl],
   );
+
+  useEffect(() => {
+    playVictoryFanfare(muted);
+    setPulse((n) => n + 1);
+  }, [muted, info.level.id, info.commands]);
 
   const golfBadge =
     info.par && info.commands <= info.par
@@ -64,64 +74,59 @@ export function SolvedDialog({ info, hasNext, onNext, onReplay, onDismiss, baseU
   };
 
   return (
-    <div className="modal solved-modal" role="dialog" aria-modal="true" aria-labelledby="solved-title">
-      <div className="modal-card solved-card">
-        <div className="confetti" aria-hidden="true">
-          <span />
-          <span />
-          <span />
-          <span />
-          <span />
-          <span />
-          <span />
-          <span />
+    <div className="modal solved-modal is-party" role="dialog" aria-modal="true" aria-labelledby="solved-title">
+      <ConfettiCanvas active durationMs={5000} />
+      <div className="modal-card solved-card party-in" key={pulse}>
+        <div className="party-badge" aria-hidden="true">
+          <div className="party-ring" />
+          <div className="party-medal">
+            <span className="party-check" />
+          </div>
         </div>
-        <div className="solved-kicker">Level solved</div>
-        <h2 id="solved-title">{info.level.name}</h2>
+        <div className="solved-kicker">You did it</div>
+        <h2 id="solved-title" className="party-title">
+          {info.level.name}
+        </h2>
         <p className="solved-sub">
-          You completed <strong>{info.level.name}</strong> ({info.level.sequence}) in{' '}
+          Level <strong>{info.level.sequence}</strong> complete in{' '}
           <strong>
             {info.commands} command{info.commands === 1 ? '' : 's'}
           </strong>
           {info.par ? (
             <>
               {' '}
-              · par {info.par} {golfBadge ? `· ${golfBadge}` : null}
+              · par {info.par}
+              {golfBadge ? <span className={`golf-badge ${golfBadge === 'Par met' ? 'is-best' : ''}`}>{golfBadge}</span> : null}
             </>
           ) : null}
-          .
         </p>
-        <p className="solved-objective">{info.level.objective.split('\n')[0]}</p>
+        <p className="party-line">Goal met. The DAG is in the state you targeted.</p>
 
         <div className="share-block">
-          <div className="share-title">Share that you learned it</div>
+          <div className="share-title">Share the win</div>
           <div className="share-actions">
-            <a
-              className="btn share-li"
-              href={share.linkedin}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
+            <a className="btn share-li" href={share.linkedin} target="_blank" rel="noopener noreferrer">
               LinkedIn
             </a>
-            <a
-              className="btn share-x"
-              href={share.twitter}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
+            <a className="btn share-x" href={share.twitter} target="_blank" rel="noopener noreferrer">
               X / Twitter
             </a>
-            <a
-              className="btn share-fb"
-              href={share.facebook}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
+            <a className="btn share-fb" href={share.facebook} target="_blank" rel="noopener noreferrer">
               Facebook
             </a>
             <button type="button" className="btn" onClick={copyLink}>
               {copied ? 'Link copied' : 'Copy link'}
+            </button>
+            <button
+              type="button"
+              className="btn"
+              onClick={() => {
+                setMuted((m) => !m);
+                if (muted) playVictoryFanfare(false);
+              }}
+              aria-pressed={muted}
+            >
+              {muted ? 'Sound off' : 'Sound on'}
             </button>
           </div>
           <div className="share-preview" title={share.text}>
@@ -131,11 +136,22 @@ export function SolvedDialog({ info, hasNext, onNext, onReplay, onDismiss, baseU
 
         <div className="solved-actions">
           {hasNext ? (
-            <button type="button" className="btn btn-accent" onClick={onNext}>
+            <button type="button" className="btn btn-accent btn-party" onClick={onNext}>
               Next level
             </button>
-          ) : null}
-          <button type="button" className="btn" onClick={onReplay}>
+          ) : (
+            <button type="button" className="btn btn-accent btn-party" onClick={onDismiss}>
+              Finish
+            </button>
+          )}
+          <button
+            type="button"
+            className="btn"
+            onClick={() => {
+              playVictoryFanfare(muted);
+              onReplay();
+            }}
+          >
             Replay
           </button>
           <button type="button" className="btn" onClick={onDismiss}>
