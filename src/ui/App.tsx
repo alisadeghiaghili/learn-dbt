@@ -1,5 +1,12 @@
 import { useCallback, useMemo, useState } from 'react';
-import { createProject, executeCommand, restartFromSpec } from '../engine';
+import {
+  coachLine,
+  createProject,
+  executeCommand,
+  formatSteps,
+  restartFromSpec,
+  solutionProgress,
+} from '../engine';
 import type { LevelDef, ProjectState } from '../engine/types';
 import { allLevels, getLevel, nextLevelId, sequences } from '../levels';
 import { sandboxLevel } from '../levels/sandbox';
@@ -67,6 +74,18 @@ export function App() {
   );
 
   const par = level.solution.length;
+  const steps = useMemo(() => solutionProgress(project, level), [project, level]);
+  const coach = useMemo(() => coachLine(project, level), [project, level]);
+
+  const pushLog = useCallback((kind: ProjectState['logs'][number]['kind'], text: string) => {
+    setSession((s) => ({
+      ...s,
+      project: {
+        ...s.project,
+        logs: [...s.project.logs, { kind, text }],
+      },
+    }));
+  }, []);
 
   const runMeta = useCallback(
     (raw: string): boolean => {
@@ -77,6 +96,12 @@ export function App() {
       }
       if (cmd === 'hint') {
         setSession((s) => ({ ...s, showHint: true, showDialog: false }));
+        pushLog('meta', level.hint);
+        pushLog('meta', coach ?? 'Type `steps` for the official solution checklist.');
+        return true;
+      }
+      if (cmd === 'steps' || cmd === 'next') {
+        pushLog('meta', formatSteps(session.project, level));
         return true;
       }
       if (cmd === 'show goal') {
@@ -88,17 +113,18 @@ export function App() {
         return true;
       }
       if (cmd === 'show solution') {
-        const sol = level.solution.join('; ');
         setSession((s) => ({
           ...s,
           project: {
             ...s.project,
             logs: [
               ...s.project.logs,
-              { kind: 'meta' as const, text: `solution: ${sol}` },
-              { kind: 'meta' as const, text: 'Run it yourself — watching is not learning.' },
+              { kind: 'meta' as const, text: formatSteps({ ...s.project, solved: true }, level) },
+              { kind: 'meta' as const, text: 'Official solution above. Run it yourself — watching is not learning.' },
+              { kind: 'meta' as const, text: `solution: ${level.solution.join('; ')}` },
             ],
           },
+          showHint: true,
         }));
         return true;
       }
@@ -128,7 +154,7 @@ export function App() {
       }
       return false;
     },
-    [level],
+    [level, coach, pushLog, session.project],
   );
 
   const onRun = useCallback(
@@ -136,17 +162,26 @@ export function App() {
       if (runMeta(raw)) return;
 
       setSession((s) => {
+        const lv = s.level ?? sandboxLevel;
         const goal = s.level && s.level.id !== 'sandbox' ? s.level.goal : undefined;
         const result = executeCommand(raw, s.project, goal);
         const history = [...s.history, raw];
         const undoStack = [...s.undoStack, s.project].slice(-30);
+        const nextCoach = coachLine(result.project, lv);
+        const logs = [...result.project.logs];
+        if (result.counts && nextCoach && !result.project.solved) {
+          logs.push({ kind: 'meta' as const, text: nextCoach });
+        } else if (result.counts && result.project.solved) {
+          logs.push({ kind: 'meta' as const, text: 'All solution steps met.' });
+        }
+        const project: ProjectState = { ...result.project, logs };
         const solvedFlash =
-          result.project.solved && !s.project.solved
-            ? `Solved ${s.level?.name ?? ''} in ${result.project.commandCount} command(s)${par ? ` (par ${par})` : ''}`
+          project.solved && !s.project.solved
+            ? `Solved ${lv.name} in ${project.commandCount} command(s)${par ? ` (par ${par})` : ''}`
             : s.solvedFlash;
         return {
           ...s,
-          project: result.project,
+          project,
           history,
           undoStack,
           solvedFlash,
@@ -227,6 +262,29 @@ export function App() {
             <h2>Objective</h2>
             <p>{level.objective}</p>
           </section>
+          {level.solution.length ? (
+            <section className="side-block">
+              <h2>Goal — solution steps</h2>
+              <ol className="sol-steps">
+                {steps.map((s, i) => (
+                  <li key={`${s.command}-${i}`} className={s.done ? 'is-done' : ''}>
+                    <code>{s.command}</code>
+                    <span className="step-note">{s.note}</span>
+                  </li>
+                ))}
+              </ol>
+              {coach ? <p className="coach-line">{coach}</p> : null}
+              <p className="par-note">
+                Checklist is the official solution. Also: <code>steps</code> · <code>hint</code> ·{' '}
+                <code>show goal</code>
+              </p>
+            </section>
+          ) : (
+            <section className="side-block">
+              <h2>Sandbox</h2>
+              <p className="coach-line">{coach ?? 'Type `help` for commands.'}</p>
+            </section>
+          )}
           {session.showHint ? (
             <section className="side-block">
               <h2>Hint</h2>

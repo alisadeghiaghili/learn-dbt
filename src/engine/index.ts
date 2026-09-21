@@ -4,3 +4,4 @@ export * from './selection';
 export * from './project';
 export * from './commands';
 export * from './compare';
+export * from './coach';

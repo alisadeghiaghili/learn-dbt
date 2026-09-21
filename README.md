@@ -37,7 +37,8 @@ Production build serves from `/learn-dbt/` (GitHub Pages project site). After ev
 - **Sandbox** — free-play demo shop DAG
 - **Levels** — objective, hint, goal DAG, command golf (cmds vs par)
 - **Terminal** — `dbt ls | run | build | test | seed | compile | source freshness`
-- **Meta** — `help`, `hint`, `levels`, `show goal`, `hide goal`, `show solution`, `reset`, `undo`
+- **Meta** — `help`, `hint`, `levels`, `steps`, `show goal`, `hide goal`, `show solution`, `reset`, `undo`
+- **Coach** — Goal panel lists the official solution commands as a checklist; after each run the terminal prints `Next: …` (same pattern as learn-dvc)
 
 ### Selection grammar (the core curriculum)
 

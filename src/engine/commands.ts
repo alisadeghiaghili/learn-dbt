@@ -319,6 +319,6 @@ function helpText(): string {
     '  --exclude model',
     '',
     'level meta',
-    '  help | hint | levels | show goal | hide goal | show solution | reset | undo',
+    '  help | hint | levels | steps | show goal | hide goal | show solution | reset | undo',
   ].join('\n');
 }

@@ -184,6 +184,60 @@ body {
   color: var(--staging);
 }
 
+.sol-steps {
+  list-style: none;
+  margin: 0 0 8px;
+  padding: 0;
+}
+
+.sol-steps li {
+  display: grid;
+  gap: 2px;
+  padding: 8px 10px;
+  margin-bottom: 6px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--panel);
+}
+
+.sol-steps li code {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--accent);
+  word-break: break-word;
+}
+
+.sol-steps li.is-done {
+  border-color: rgba(34, 197, 94, 0.45);
+}
+
+.sol-steps li.is-done code {
+  color: var(--ok);
+}
+
+.step-note {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.coach-line {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--staging);
+  margin: 0 0 6px;
+}
+
+.par-note {
+  font-size: 11px;
+  color: var(--muted);
+  margin: 0;
+}
+
+.par-note code {
+  font-family: var(--mono);
+  color: var(--ink);
+}
+
 /* ----- DAG ----- */
 .dag-wrap {
   min-height: 100%;
