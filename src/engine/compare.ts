@@ -1,0 +1,149 @@
+import type { GoalSpec, ProjectState } from './types';
+
+export interface GoalEvaluation {
+  solved: boolean;
+  reasons: string[];
+}
+
+/**
+ * Evaluate whether the project satisfies a level goal.
+ *
+ * Args:
+ *   project: Current project state.
+ *   goal: Level goal specification.
+ * Returns:
+ *   Evaluation with solved flag and human-readable failure reasons.
+ */
+export function evaluateGoal(project: ProjectState, goal: GoalSpec): GoalEvaluation {
+  const reasons: string[] = [];
+
+  if (goal.materializations) {
+    for (const [id, mat] of Object.entries(goal.materializations)) {
+      const node = project.nodes[id];
+      if (!node) {
+        reasons.push(`missing model: ${id}`);
+        continue;
+      }
+      if (node.materialization !== mat) {
+        reasons.push(`${id} materialization is ${node.materialization}, expected ${mat}`);
+      }
+    }
+  }
+
+  if (goal.refs) {
+    for (const [id, refs] of Object.entries(goal.refs)) {
+      const node = project.nodes[id];
+      if (!node) {
+        reasons.push(`missing model: ${id}`);
+        continue;
+      }
+      const have = [...node.refs].sort();
+      const want = [...refs].sort();
+      if (JSON.stringify(have) !== JSON.stringify(want)) {
+        reasons.push(`${id} refs are [${have.join(', ')}], expected [${want.join(', ')}]`);
+      }
+    }
+  }
+
+  const builtMode = goal.builtMode ?? 'exactly';
+  const expectedBuilt = goal.built ?? [];
+  const actualBuilt = Object.values(project.nodes)
+    .filter((n) => n.status === 'success')
+    .map((n) => n.id)
+    .sort();
+
+  if (goal.notBuilt?.length) {
+    for (const id of goal.notBuilt) {
+      if (actualBuilt.includes(id)) {
+        reasons.push(`${id} must NOT be built`);
+      }
+    }
+  }
+
+  if (expectedBuilt.length || builtMode === 'none') {
+    const exp = [...expectedBuilt].sort();
+    if (builtMode === 'none') {
+      if (actualBuilt.length) {
+        reasons.push(`expected no models built, got [${actualBuilt.join(', ')}]`);
+      }
+    } else if (builtMode === 'atLeast') {
+      for (const id of exp) {
+        if (!actualBuilt.includes(id)) {
+          reasons.push(`missing build: ${id}`);
+        }
+      }
+    } else {
+      if (JSON.stringify(actualBuilt) !== JSON.stringify(exp)) {
+        reasons.push(
+          `built set is [${actualBuilt.join(', ')}], expected [${exp.join(', ')}]`,
+        );
+      }
+    }
+  }
+
+  if (goal.testsPassed?.length) {
+    for (const key of goal.testsPassed) {
+      if (!testPasses(project, key)) {
+        reasons.push(`test not passed: ${key}`);
+      }
+    }
+  }
+
+  if (goal.mustRunCommand) {
+    const needle = goal.mustRunCommand;
+    const hit = project.commandsIssued.some((c) => c.includes(needle));
+    if (!hit) {
+      reasons.push(`run a command containing: ${needle}`);
+    }
+  }
+
+  if (goal.selectionIncludes?.length) {
+    const sel = new Set(project.lastSelection);
+    for (const id of goal.selectionIncludes) {
+      if (!sel.has(id)) reasons.push(`selection missing: ${id}`);
+    }
+  }
+
+  if (goal.selectionEquals) {
+    const a = [...project.lastSelection].sort();
+    const b = [...goal.selectionEquals].sort();
+    if (JSON.stringify(a) !== JSON.stringify(b)) {
+      reasons.push(
+        `selection is [${a.join(', ')}], expected [${b.join(', ')}]`,
+      );
+    }
+  }
+
+  const solved = reasons.length === 0;
+  return { solved, reasons };
+}
+
+function testPasses(project: ProjectState, key: string): boolean {
+  // key forms: testId | model | model.column | model.type
+  for (const node of Object.values(project.nodes)) {
+    if (node.id === key) {
+      return node.tests.length > 0 && node.tests.every((t) => t.passed === true);
+    }
+    for (const t of node.tests) {
+      if (t.id === key) return t.passed === true;
+      if (t.column && key === `${node.id}.${t.column}` && t.passed === true) return true;
+      if (key === `${node.id}.${t.type}` && t.passed === true) return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Set of successfully built model ids.
+ *
+ * Args:
+ *   project: Project state.
+ * Returns:
+ *   Sorted id list.
+ */
+export function builtModelIds(project: ProjectState): string[] {
+  return Object.values(project.nodes)
+    .filter((n) => n.status === 'success')
+    .map((n) => n.id)
+    .sort();
+}
