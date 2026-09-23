@@ -32,8 +32,8 @@ await page.getByRole('button', { name: 'Run' }).click();
 await page.waitForTimeout(400);
 const logs = await page.locator('.term-logs').innerText();
 console.log('--- logs ---\n' + logs.slice(0, 600));
-if (!logs.includes('Next: dbt run --select +fct_orders') && !logs.includes('Official step')) {
-  throw new Error('Expected Next coach line after wrong command');
+if (!logs.includes('Next: dbt run --select +fct_orders') && !logs.includes('Still on: dbt run --select +fct_orders')) {
+  throw new Error('Expected Next/Progress-kept coach line after wrong command');
 }
 
 // steps meta

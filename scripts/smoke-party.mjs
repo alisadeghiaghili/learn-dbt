@@ -24,7 +24,7 @@ console.log('party dag nodes:', partyNodes);
 if (partyNodes < 1) throw new Error('expected at least one celebrating DAG node');
 const modalText = (await page.locator('.solved-card').innerText()).toLowerCase();
 if (!modalText.includes('you did it')) throw new Error('missing celebration kicker');
-if (!modalText.includes('share the win')) throw new Error('missing share block');
+if (!modalText.includes('share what you learned')) throw new Error('missing share block');
 await page.waitForTimeout(800);
 await page.screenshot({ path: 'output/playwright/learn-dbt-party.png', fullPage: true });
 console.log('PARTY SMOKE OK');

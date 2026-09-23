@@ -138,6 +138,10 @@ export interface LevelDef {
   start: ProjectSpec;
   goal: GoalSpec;
   dialog?: LevelDialogSlide[];
+  /** What the learner should understand after this level (bullet strings). */
+  learning?: string[];
+  /** Production / interview notes shown in the guide panel. */
+  fieldNotes?: string[];
   /** Meta-commands that do not count toward golf. */
   disabledCommands?: string[];
 }

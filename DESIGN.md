@@ -1,20 +1,8 @@
 # learn-dbt — Design Notes
 
-## Product mapping (learnGitBranching → learn-dbt)
+## Product mapping
 
-| LGB | learn-dbt |
-|-----|-----------|
-| Commit tree visualization | Model DAG visualization |
-| Git engine (branch/merge/rebase) | dbt engine (select/build/test/materialize) |
-| Command terminal (`git …`) | Command terminal (`dbt …`) |
-| Sandbox free-play | Sandbox free-play |
-| Levels: startTree / goalTree / solutionCommand | Levels: startProject / goalSpec / solutionCommands |
-| TreeCompare after each command | Goal asserts after each command |
-| Command golf | Command golf |
-| Remotes / origin | Target environments (dev/prod) later |
-| `hint` / `show goal` / `show solution` / `reset` / `undo` | Same meta-commands |
-
-Git and dbt do **not** share graph semantics. Git mutates pointers over immutable commits. dbt selects a subgraph and materializes nodes in topological order. The product shape is the same; the domain model is not a port of `src/js/git`.
+Interactive git-tree tutorials and this app share a product *shape* (sandbox + terminal + levels + goal), not a domain model. Git mutates pointers over immutable commits. dbt selects a subgraph and materializes nodes in topological order. The engine is a dbt simulator, not a port of any git engine.
 
 ## Style anchor
 

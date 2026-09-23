@@ -392,6 +392,13 @@ export function App() {
           <section className="side-block">
             <h2>You are learning</h2>
             <p>{level.objective}</p>
+            {level.learning?.length ? (
+              <ul className="learn-list">
+                {level.learning.map((t) => (
+                  <li key={t}>{t}</li>
+                ))}
+              </ul>
+            ) : null}
           </section>
           {level.solution.length ? (
             <section className="side-block">
@@ -434,9 +441,9 @@ export function App() {
           <section className="side-block">
             <h2>Field notes</h2>
             <p className="field-note">
-              Selection and lineage mistakes are the usual production incidents in analytics
-              engineering. Prefer `dbt build` on the critical path; slim CI with
-              `status:modified+` when the warehouse is large.
+              {level.fieldNotes?.length
+                ? level.fieldNotes.join('\n\n')
+                : 'Selection and lineage mistakes are the usual production incidents in analytics engineering. Prefer `dbt build` on the critical path; slim CI with `status:modified+` when the warehouse is large.'}
             </p>
           </section>
         </aside>

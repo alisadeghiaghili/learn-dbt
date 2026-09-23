@@ -5,26 +5,34 @@ interface Props {
   logs: LogLine[];
   onRun: (cmd: string) => void;
   history: string[];
-  /** Next official command for ghost/placeholder (learn-dvc terminal). */
+  /** Official next command for placeholder + first-word Tab. */
   nextHint?: string | null;
-  /** Extra completion candidates (solution + common dbt cmds). */
   completions?: string[];
-  /** Blur input when true (celebration modal). */
   autoFocus?: boolean;
 }
 
+function parseLine(value: string): { head: string[]; current: string; afterSpace: boolean } {
+  const afterSpace = value === '' || /\s$/.test(value);
+  const tokens = value.trim() === '' ? [] : value.trim().split(/\s+/);
+  if (afterSpace) return { head: tokens, current: '', afterSpace: true };
+  const current = tokens[tokens.length - 1] ?? '';
+  return { head: tokens.slice(0, -1), current, afterSpace: false };
+}
+
+function measureText(text: string, font: string): number {
+  try {
+    const ctx = document.createElement('canvas').getContext('2d');
+    if (!ctx) return text.length * 8;
+    ctx.font = font;
+    return ctx.measureText(text).width;
+  } catch {
+    return text.length * 8;
+  }
+}
+
 /**
- * Terminal input + output log with bash-like Tab completion and history.
- *
- * Args:
- *   logs: Log lines to display.
- *   onRun: Callback when the user submits a command.
- *   history: Previous commands for arrow-key navigation.
- *   nextHint: Official next command for placeholder/ghost.
- *   completions: Word/line completion candidates.
- *   autoFocus: Keep caret in the prompt after renders when true (default).
- * Returns:
- *   React terminal panel.
+ * Terminal with bash-like word-by-word Tab completion and word-suffix ghost.
+ * Empty input uses placeholder only — ghost never stacks on top (learn-dvc fix).
  */
 export function Terminal({
   logs,
@@ -41,10 +49,11 @@ export function Terminal({
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const ghostRef = useRef<HTMLSpanElement>(null);
-  const tabState = useRef<{ wordIdx: number; cycle: number; key: string }>({
-    wordIdx: 0,
-    cycle: 0,
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const wordState = useRef<{ key: string; cycle: string[]; idx: number }>({
     key: '',
+    cycle: [],
+    idx: 0,
   });
 
   useEffect(() => {
@@ -58,97 +67,135 @@ export function Terminal({
 
   const pool = useMemo(() => {
     const base = [
+      'dbt',
       'dbt ls',
-      'dbt run --select ',
-      'dbt build --select ',
-      'dbt test --select ',
-      'dbt run --select +',
-      'dbt run --select status:modified+',
+      'dbt run',
+      'dbt build',
+      'dbt test',
+      'dbt seed',
+      'dbt compile',
+      'dbt run --select',
+      'dbt build --select',
+      'dbt test --select',
+      'dbt run --exclude',
+      'dbt run --full-refresh',
+      '--select',
+      '--exclude',
+      '--full-refresh',
       'help',
       'hint',
       'steps',
+      'why',
       'show goal',
+      'hide goal',
+      'show solution',
       'reset',
+      'undo',
+      'levels',
     ];
     return [...new Set([...(nextHint ? [nextHint] : []), ...completions, ...base, ...history.slice().reverse()])];
   }, [completions, history, nextHint]);
 
-  const ghostSuffix = useMemo(() => {
-    // Show only the remainder of the current word (learn-dvc ghost fix).
-    if (!value.trim() || !nextHint) return '';
-    const words = value.split(/(\s+)/);
-    const hintWords = nextHint.split(/(\s+)/);
-    // compare non-space tokens
-    let vi = 0;
-    let hi = 0;
-    while (vi < words.length && hi < hintWords.length) {
-      if (/^\s+$/.test(words[vi])) {
-        vi++;
-        continue;
-      }
-      if (/^\s+$/.test(hintWords[hi])) {
-        hi++;
-        continue;
-      }
-      const cur = words[vi];
-      const target = hintWords[hi];
-      if (value.length <= value.indexOf(cur) + cur.length) {
-        // on this word
-        if (target.startsWith(cur) && cur.length < target.length) {
-          // ghost = rest of word after caret-ish (suffix of current word)
-          return target.slice(cur.length);
+  /** Words that can fill the current (or next) token. */
+  const nextWords = (head: string[], current: string): string[] => {
+    const afterSpace = current === '';
+    const words = new Set<string>();
+    for (const line of pool) {
+      const toks = line.trim().split(/\s+/);
+      const at = head.length;
+      const w = toks[at];
+      if (!w) continue;
+      if (afterSpace) {
+        // next full word after a typed head
+        if (toks.slice(0, head.length).every((t, i) => t === head[i])) {
+          words.add(w);
         }
-        return '';
+      } else if (w.toLowerCase().startsWith(current.toLowerCase())) {
+        // complete current word only
+        if (head.every((h, i) => toks[i] === h)) {
+          words.add(w);
+        }
       }
-      if (cur !== target) return '';
-      vi++;
-      hi++;
     }
-    return '';
-  }, [value, nextHint]);
-
-  const placeholder = nextHint
-    ? `Next: ${nextHint}  (Tab steps word-by-word)`
-    : 'Type a dbt command…  (↑/↓ history · Tab complete)';
-
-  const completeWord = () => {
-    const endsWithSpace = /\s$/.test(value) || value === '';
-    const tokens = value.trimEnd() === '' ? [''] : value.trimEnd().split(/\s+/);
-    const wordIdx = endsWithSpace ? tokens.length : tokens.length - 1;
-    const partial = endsWithSpace ? '' : tokens[wordIdx] ?? '';
-    const tabKey = `${wordIdx}:${partial}`;
-
-    if (tabState.current.key !== tabKey) {
-      tabState.current = { wordIdx, cycle: 0, key: tabKey };
+    // solution / hint first
+    if (nextHint) {
+      const toks = nextHint.trim().split(/\s+/);
+      const w = toks[head.length];
+      if (w && (afterSpace || w.toLowerCase().startsWith(current.toLowerCase()))) {
+        return [w, ...[...words].filter((x) => x !== w)];
+      }
     }
+    return [...words];
+  };
 
-    // Build candidate full lines then extract the word at wordIdx
-    const candidates = pool.filter((c) => {
-      const cWords = c.trim().split(/\s+/);
-      const w = cWords[wordIdx] ?? '';
-      return w.startsWith(partial) && (partial || wordIdx > 0 || w.length);
-    });
+  // Ghost: only remainder of the *current word*, only while typing.
+  useEffect(() => {
+    const ghost = ghostRef.current;
+    const wrap = wrapRef.current;
+    if (!ghost || !wrap) return;
+    ghost.textContent = '';
+    ghost.style.left = '10px';
+    wrap.classList.remove('has-ghost');
+    if (!value) return;
 
-    if (!candidates.length) {
+    const { head, current, afterSpace } = parseLine(value);
+    const options = nextWords(head, afterSpace ? '' : current);
+    const first = options[0];
+    if (!first) return;
+
+    const font = '13px Cascadia Code, Consolas, ui-monospace, monospace';
+    const textWidth = measureText(value, font);
+
+    if (afterSpace) {
+      ghost.textContent = first;
+      ghost.style.left = `${10 + textWidth + 4}px`;
+      wrap.classList.add('has-ghost');
+      return;
+    }
+    if (!first.toLowerCase().startsWith(current.toLowerCase()) || first.length <= current.length) {
+      return;
+    }
+    // suffix of current word only — never the whole command
+    ghost.textContent = first.slice(current.length);
+    ghost.style.left = `${10 + textWidth}px`;
+    wrap.classList.add('has-ghost');
+  }, [value, pool, nextHint]);
+
+  const applyTab = () => {
+    const { head, current, afterSpace } = parseLine(value);
+    const cycleKey = `${head.join(' ')}|${afterSpace ? '' : current}`;
+
+    if (!value && nextHint) {
+      // First Tab from empty: only the first word (e.g. "dbt"), not the full command.
+      const firstWord = nextHint.split(/\s+/)[0]!;
+      setValue(firstWord);
+      wordState.current = { key: firstWord, cycle: [firstWord], idx: 0 };
       setTabInfo(null);
       return;
     }
 
-    // unique words at this position
-    const words = [...new Set(candidates.map((c) => c.trim().split(/\s+/)[wordIdx] ?? ''))].filter(
-      (w) => w && w.startsWith(partial),
-    );
-    if (!words.length) {
+    const options = nextWords(head, afterSpace ? '' : current);
+    if (!options.length) {
       setTabInfo(null);
       return;
     }
 
-    const pick = words[tabState.current.cycle % words.length];
-    tabState.current.cycle += 1;
-    const nextTokens = [...tokens.slice(0, wordIdx), pick];
-    setValue(nextTokens.join(' ') + ' ');
-    if (words.length > 1) {
-      setTabInfo(`Tab word ${tabState.current.cycle}/${words.length}: ${words.join('  ')}`);
+    if (cycleKey !== wordState.current.key || !wordState.current.cycle.length) {
+      wordState.current = { key: cycleKey, cycle: options, idx: 0 };
+    } else {
+      wordState.current.idx = (wordState.current.idx + 1) % wordState.current.cycle.length;
+    }
+
+    const chosen = wordState.current.cycle[wordState.current.idx] ?? options[0]!;
+    const headText = head.length ? `${head.join(' ')} ` : '';
+    // Leave a trailing space so the next Tab advances to the next word.
+    setValue(`${headText}${chosen}`);
+
+    if (wordState.current.cycle.length > 1) {
+      const preview = wordState.current.cycle.slice(0, 6).join(' · ');
+      setTabInfo(
+        `Tab word ${wordState.current.idx + 1}/${wordState.current.cycle.length}: ${preview}`,
+      );
     } else {
       setTabInfo(null);
     }
@@ -162,15 +209,22 @@ export function Terminal({
     setHistIdx(-1);
     setDraft('');
     setTabInfo(null);
+    wordState.current = { key: '', cycle: [], idx: 0 };
     requestAnimationFrame(() => inputRef.current?.focus());
   };
+
+  const placeholder = nextHint
+    ? `Next: ${nextHint}  (Tab steps word-by-word)`
+    : 'Type a dbt command…  (↑/↓ history · Tab completes one word)';
 
   return (
     <div className="terminal">
       {nextHint ? (
         <div className="term-next-strip">
-          <span>Next: {nextHint}</span>
-          <span className="term-next-tip">press Tab to fill</span>
+          <span>
+            Next: <code>{nextHint}</code>
+          </span>
+          <span className="term-next-tip">Tab fills one word at a time</span>
         </div>
       ) : null}
       {tabInfo ? <div className="term-next-strip tab-info">{tabInfo}</div> : null}
@@ -195,7 +249,7 @@ export function Terminal({
         <label className="term-prompt" htmlFor="term-input">
           dbt ▸
         </label>
-        <div className="term-input-wrap">
+        <div className="term-input-wrap" ref={wrapRef}>
           <input
             id="term-input"
             ref={inputRef}
@@ -207,10 +261,9 @@ export function Terminal({
             onChange={(e) => {
               setValue(e.target.value);
               setTabInfo(null);
-              tabState.current.key = '';
+              wordState.current = { key: '', cycle: [], idx: 0 };
             }}
             onBlur={() => {
-              // keep caret unless a modal stole focus intentionally
               if (autoFocus && !document.querySelector('.solved-modal')) {
                 requestAnimationFrame(() => inputRef.current?.focus());
               }
@@ -218,13 +271,14 @@ export function Terminal({
             onKeyDown={(e) => {
               if (e.key === 'Tab') {
                 e.preventDefault();
-                completeWord();
+                applyTab();
                 return;
               }
               if (e.key === 'Escape') {
                 e.preventDefault();
                 setValue('');
                 setTabInfo(null);
+                wordState.current = { key: '', cycle: [], idx: 0 };
                 return;
               }
               if (e.key === 'ArrowUp') {
@@ -234,6 +288,7 @@ export function Terminal({
                 const next = histIdx < 0 ? history.length - 1 : Math.max(0, histIdx - 1);
                 setHistIdx(next);
                 setValue(history[next]);
+                wordState.current = { key: '', cycle: [], idx: 0 };
                 return;
               }
               if (e.key === 'ArrowDown') {
@@ -247,12 +302,11 @@ export function Terminal({
                   setHistIdx(next);
                   setValue(history[next]);
                 }
+                wordState.current = { key: '', cycle: [], idx: 0 };
               }
             }}
           />
-          <span className="term-ghost" ref={ghostRef} aria-hidden="true">
-            {ghostSuffix}
-          </span>
+          <span className="term-ghost" ref={ghostRef} aria-hidden="true" />
         </div>
         <button type="submit" className="btn btn-accent">
           Run

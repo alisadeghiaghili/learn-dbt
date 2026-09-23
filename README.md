@@ -5,14 +5,12 @@
 An interactive dbt visualization and tutorial — sandbox, levels, and a command
 terminal for learning dbt operations.
 
-learnGitBranching teaches git by rendering a commit tree and letting you type
-commands until the tree matches the goal. learn-dbt teaches dbt by rendering a
-**model DAG** and letting you type `dbt` commands until the project state
-matches the goal.
+learn-dbt teaches dbt by rendering a **model DAG** and letting you type `dbt`
+commands until the project state matches the goal.
 
-Git and dbt do not share graph semantics. This is not a port of the git
-engine. It is a sandbox for **selection, materialization, tests, and lineage** —
-the parts of dbt that are hard to learn from docs alone.
+Git and dbt do not share graph semantics. This is a sandbox for **selection,
+materialization, tests, and lineage** — the parts of dbt that are hard to
+learn from docs alone.
 
 ## Quick start
 

@@ -293,6 +293,19 @@ body {
 .field-note {
   font-size: 12px;
   color: var(--muted);
+  white-space: pre-wrap;
+}
+
+.learn-list {
+  margin: 8px 0 0;
+  padding-left: 16px;
+  color: var(--staging);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.learn-list li {
+  margin-bottom: 4px;
 }
 
 .term-next-strip {
@@ -317,16 +330,25 @@ body {
   display: block;
 }
 
+.term-input-wrap.has-ghost .term-ghost {
+  display: inline;
+}
+
 .term-ghost {
+  display: none;
   position: absolute;
-  left: 10px;
   top: 50%;
   transform: translateY(-50%);
   pointer-events: none;
   font-family: var(--mono);
   font-size: 13px;
-  color: rgba(156, 163, 175, 0.45);
+  color: rgba(156, 163, 175, 0.4);
   white-space: pre;
+}
+
+.term-input::placeholder {
+  color: var(--muted);
+  opacity: 0.85;
 }
 
 .term-input {
