@@ -108,9 +108,89 @@ export function evaluateGoal(project: ProjectState, goal: GoalSpec): GoalEvaluat
     const a = [...project.lastSelection].sort();
     const b = [...goal.selectionEquals].sort();
     if (JSON.stringify(a) !== JSON.stringify(b)) {
-      reasons.push(
-        `selection is [${a.join(', ')}], expected [${b.join(', ')}]`,
+      reasons.push(`selection is [${a.join(', ')}], expected [${b.join(', ')}]`);
+    }
+  }
+
+  if (goal.modelsExist?.length) {
+    for (const id of goal.modelsExist) {
+      if (!project.nodes[id]) reasons.push(`model missing: ${id}`);
+    }
+  }
+
+  if (goal.testsDefined?.length) {
+    for (const t of goal.testsDefined) {
+      const node = project.nodes[t.model];
+      if (!node) {
+        reasons.push(`model missing for test: ${t.model}`);
+        continue;
+      }
+      const hit = node.tests.some(
+        (x) =>
+          x.type === t.type &&
+          (t.column === undefined || x.column === t.column),
       );
+      if (!hit) reasons.push(`test missing: ${t.type}${t.column ? ` on ${t.column}` : ''} for ${t.model}`);
+    }
+  }
+
+  if (goal.macrosDefined?.length) {
+    for (const m of goal.macrosDefined) {
+      if (!project.macros[m]) reasons.push(`macro missing: ${m}`);
+    }
+  }
+
+  if (goal.packagesInstalled?.length) {
+    for (const p of goal.packagesInstalled) {
+      if (!project.packages.includes(p)) reasons.push(`package missing: ${p}`);
+    }
+  }
+
+  if (goal.docsBuilt && !project.docsBuilt) {
+    reasons.push('run `dbt docs generate`');
+  }
+
+  if (goal.snapshots?.length) {
+    for (const id of goal.snapshots) {
+      const n = project.nodes[id];
+      if (!n || n.materialization !== 'snapshot') reasons.push(`snapshot missing: ${id}`);
+    }
+  }
+
+  if (goal.exposures?.length) {
+    for (const id of goal.exposures) {
+      if (!project.exposures[id]) reasons.push(`exposure missing: ${id}`);
+    }
+  }
+
+  if (goal.varsSet) {
+    for (const [k, v] of Object.entries(goal.varsSet)) {
+      if (project.vars[k] !== v) reasons.push(`var ${k} should be ${v}`);
+    }
+  }
+
+  if (goal.contracts?.length) {
+    for (const id of goal.contracts) {
+      const n = project.nodes[id];
+      if (!n?.contract) reasons.push(`contract not enforced on ${id}`);
+    }
+  }
+
+  if (goal.incrementalStrategies) {
+    for (const [id, strat] of Object.entries(goal.incrementalStrategies)) {
+      const n = project.nodes[id];
+      if (n?.incrementalStrategy !== strat) {
+        reasons.push(`${id} strategy is ${n?.incrementalStrategy ?? 'unset'}, expected ${strat}`);
+      }
+    }
+  }
+
+  if (goal.sqlContains) {
+    for (const [id, needle] of Object.entries(goal.sqlContains)) {
+      const n = project.nodes[id];
+      if (!n?.sql || !n.sql.includes(needle)) {
+        reasons.push(`${id} sql should contain ${needle}`);
+      }
     }
   }
 

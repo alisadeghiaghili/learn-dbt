@@ -70,13 +70,27 @@ export function createProject(spec: ProjectSpec): ProjectState {
       status: n.status ?? 'pending',
       modified: n.modified ?? false,
       hasRelation: n.hasRelation ?? (n.status === 'success'),
+      sql: n.sql,
+      incrementalStrategy: n.incrementalStrategy,
+      uniqueKey: n.uniqueKey,
+      contract: n.contract,
+      declaredColumns: n.declaredColumns,
+      description: n.description,
+      owner: n.owner,
+      snapshotStrategy: n.snapshotStrategy,
+      updatedAt: n.updatedAt,
     };
   }
 
   return {
     nodes,
     sources,
+    macros: Object.fromEntries((spec.macros ?? []).map((m) => [m.name, m])),
+    exposures: Object.fromEntries((spec.exposures ?? []).map((e) => [e.id, e])),
+    packages: [...(spec.packages ?? [])],
+    vars: { ...(spec.vars ?? {}) },
     target: spec.target ?? 'dev',
+    docsBuilt: false,
     commandCount: 0,
     lastSelection: [],
     logs: [],

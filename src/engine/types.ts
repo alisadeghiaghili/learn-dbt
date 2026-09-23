@@ -11,21 +11,32 @@ export type Materialization =
   | 'table'
   | 'incremental'
   | 'ephemeral'
-  | 'snapshot';
+  | 'snapshot'
+  | 'materialized_view';
+
+export type IncrementalStrategy = 'append' | 'delete+insert' | 'merge' | 'microbatch';
 
 export type NodeStatus = 'pending' | 'success' | 'error' | 'skipped';
 
-export type TestType = 'unique' | 'not_null' | 'relationships' | 'accepted_values' | 'custom';
+export type TestType =
+  | 'unique'
+  | 'not_null'
+  | 'relationships'
+  | 'accepted_values'
+  | 'expression_is_true'
+  | 'custom';
 
 export interface DbtTest {
   id: string;
   type: TestType;
-  /** Column the test runs on, if column-scoped. */
   column?: string;
-  /** Upstream ref for relationships tests. */
   to?: string;
+  /** accepted_values list or expression body. */
+  config?: string;
   severity: 'error' | 'warn';
   passed?: boolean;
+  /** singular tests owned by a model id */
+  kind?: 'generic' | 'singular' | 'unit';
 }
 
 export interface DbtNode {
@@ -34,46 +45,72 @@ export interface DbtNode {
   path: string;
   layer: Layer;
   materialization: Materialization;
-  /** Upstream model ids referenced via ref(). */
   refs: string[];
-  /** Upstream source ids referenced via source(). Format: `source.table`. */
   sourceRefs: string[];
   tags: string[];
   tests: DbtTest[];
   status: NodeStatus;
-  /** True when this node was modified relative to production state. */
   modified: boolean;
-  /** Incremental models remember whether they have a target relation. */
   hasRelation: boolean;
+  /** Model SQL body (may contain ref()/source()/jinja). */
+  sql?: string;
+  incrementalStrategy?: IncrementalStrategy;
+  uniqueKey?: string;
+  /** Enforced model contract (columns must be declared). */
+  contract?: boolean;
+  declaredColumns?: string[];
+  description?: string;
+  owner?: string;
+  /** Snapshot config */
+  snapshotStrategy?: 'timestamp' | 'check';
+  updatedAt?: string;
 }
 
 export interface SourceNode {
   id: string;
   sourceName: string;
   tableName: string;
-  /** Whether the raw relation exists in the warehouse. */
   loaded: boolean;
+  description?: string;
+  loadedAt?: string;
+  freshnessWarnAfter?: string;
+  freshnessErrorAfter?: string;
+}
+
+export interface MacroDef {
+  name: string;
+  body: string;
+}
+
+export interface ExposureDef {
+  id: string;
+  type: 'dashboard' | 'analysis' | 'ml' | 'application';
+  dependsOn: string[];
+  maturity: 'low' | 'medium' | 'high';
 }
 
 export interface LogLine {
-  kind: 'cmd' | 'out' | 'err' | 'ok' | 'meta';
+  kind: 'cmd' | 'out' | 'err' | 'ok' | 'meta' | 'why';
   text: string;
 }
 
 export interface ProjectState {
   nodes: Record<string, DbtNode>;
   sources: Record<string, SourceNode>;
+  macros: Record<string, MacroDef>;
+  exposures: Record<string, ExposureDef>;
+  packages: string[];
+  vars: Record<string, string>;
   target: string;
+  /** Docs have been generated at least once. */
+  docsBuilt: boolean;
   commandCount: number;
   lastSelection: string[];
   logs: LogLine[];
-  /** Set when the level's goal is satisfied. */
   solved: boolean;
-  /** Raw terminal lines issued this session (for command-based goals). */
   commandsIssued: string[];
 }
 
-/** Compact node definition used by levels and sandbox seeds. */
 export interface NodeSpec {
   id: string;
   layer: Layer;
@@ -85,41 +122,61 @@ export interface NodeSpec {
   tests?: Omit<DbtTest, 'id' | 'passed'>[];
   modified?: boolean;
   hasRelation?: boolean;
-  /** Initial runtime status (e.g. already built in prod). */
   status?: NodeStatus;
+  sql?: string;
+  incrementalStrategy?: IncrementalStrategy;
+  uniqueKey?: string;
+  contract?: boolean;
+  declaredColumns?: string[];
+  description?: string;
+  owner?: string;
+  snapshotStrategy?: 'timestamp' | 'check';
+  updatedAt?: string;
 }
 
 export interface SourceSpec {
   id: string;
   loaded?: boolean;
+  description?: string;
+  loadedAt?: string;
+  freshnessWarnAfter?: string;
+  freshnessErrorAfter?: string;
 }
 
 export interface ProjectSpec {
   nodes: NodeSpec[];
   sources?: SourceSpec[];
+  macros?: MacroDef[];
+  exposures?: ExposureDef[];
+  packages?: string[];
+  vars?: Record<string, string>;
   target?: string;
 }
 
 export type GoalBuiltMode = 'exactly' | 'atLeast' | 'none';
 
 export interface GoalSpec {
-  /** Models that must be successfully built. */
   built?: string[];
   builtMode?: GoalBuiltMode;
-  /** If set, all listed tests must pass (ids or `model.column:type`). */
   testsPassed?: string[];
-  /** If set, these model ids must not be built. */
   notBuilt?: string[];
-  /** Structural requirement: materialization map that must hold. */
   materializations?: Record<string, Materialization>;
-  /** Structural requirement: required refs for a model. */
   refs?: Record<string, string[]>;
-  /** At least one issued command must contain this substring. */
   mustRunCommand?: string;
-  /** Every id must appear in the last selection. */
   selectionIncludes?: string[];
-  /** Last selection must equal this set (order-insensitive). */
   selectionEquals?: string[];
+  /** Structural goals for authored content. */
+  modelsExist?: string[];
+  testsDefined?: { model: string; type: TestType; column?: string }[];
+  macrosDefined?: string[];
+  packagesInstalled?: string[];
+  docsBuilt?: boolean;
+  snapshots?: string[];
+  exposures?: string[];
+  varsSet?: Record<string, string>;
+  contracts?: string[];
+  incrementalStrategies?: Record<string, IncrementalStrategy>;
+  sqlContains?: Record<string, string>;
 }
 
 export interface LevelDialogSlide {
@@ -133,15 +190,11 @@ export interface LevelDef {
   name: string;
   objective: string;
   hint: string;
-  /** Par = number of commands in the canonical solution. */
   solution: string[];
   start: ProjectSpec;
   goal: GoalSpec;
   dialog?: LevelDialogSlide[];
-  /** What the learner should understand after this level (bullet strings). */
   learning?: string[];
-  /** Production / interview notes shown in the guide panel. */
   fieldNotes?: string[];
-  /** Meta-commands that do not count toward golf. */
   disabledCommands?: string[];
 }

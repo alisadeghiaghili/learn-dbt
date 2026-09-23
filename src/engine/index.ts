@@ -6,3 +6,5 @@ export * from './commands';
 export * from './compare';
 export * from './coach';
 export * from './teach';
+export * from './sql';
+export * from './mutate';

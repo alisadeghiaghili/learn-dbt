@@ -1,4 +1,7 @@
 import type { LevelDef, LevelDialogSlide, ProjectSpec } from '../engine/types';
+import { foundationLevels } from './packs/foundation';
+import { testingLevels } from './packs/testing';
+import { jinjaLevels, modelingLevels } from './packs/jinja-modeling';
 
 /** Shared e-commerce demo warehouse used by intro + selection levels. */
 export function demoShopSpec(): ProjectSpec {
@@ -516,10 +519,16 @@ export const allLevels: LevelDef[] = [
   ...introLevels,
   ...selectionLevels,
   ...materializationLevels,
+  ...foundationLevels,
+  ...testingLevels,
+  ...jinjaLevels,
+  ...modelingLevels,
 ].map((l) => ({
   ...l,
   ...(levelCoaching[l.id] ?? {}),
   dialog: levelCoaching[l.id]?.dialog ?? l.dialog,
+  learning: l.learning ?? levelCoaching[l.id]?.learning,
+  fieldNotes: l.fieldNotes ?? levelCoaching[l.id]?.fieldNotes,
 }));
 
 export const sequences: { id: string; title: string; about: string }[] = [
@@ -537,6 +546,26 @@ export const sequences: { id: string; title: string; about: string }[] = [
     id: 'materialization',
     title: 'Materializations',
     about: 'Ephemeral, incremental, missing upstreams.',
+  },
+  {
+    id: 'foundation',
+    title: 'Writing models',
+    about: 'SQL, ref/source, grain, staging rules, tables vs views.',
+  },
+  {
+    id: 'testing',
+    title: 'Tests & contracts',
+    about: 'unique, not_null, relationships, accepted_values, severity, SCD, freshness.',
+  },
+  {
+    id: 'jinja',
+    title: 'Jinja & packages',
+    about: 'vars, macros, packages, incremental strategies, exposures, docs.',
+  },
+  {
+    id: 'modeling',
+    title: 'Modeling & ops',
+    about: 'Layers, fact/dim, ownership, targets, capstone pipeline.',
   },
 ];
 

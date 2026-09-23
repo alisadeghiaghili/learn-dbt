@@ -103,13 +103,27 @@ Goal fields: `built` / `builtMode` (`exactly` | `atLeast` | `none`),
 - Incremental models update an existing relation unless `--full-refresh`.
 - `dbt build` materializes then runs the node's tests in order.
 
+## Curriculum map
+
+| Sequence | Depth |
+|----------|--------|
+| Introduction | `ls` / `run` / `+` / `@` / `build` vs `run` |
+| Selection grammar | tags, paths, sources, exclude, slim CI |
+| Materializations | ephemeral, incremental, missing upstream |
+| Writing models | grain, `ref()`/`source()`, staging rules, table vs view |
+| Tests & contracts | unique, not_null, relationships, accepted_values, severity, contracts, SCD, seeds, freshness |
+| Jinja & packages | vars, macros, packages, incremental strategies, exposures, docs |
+| Modeling & ops | layers, fact/dim, ownership, targets, capstone pipeline |
+
+Authoring commands (`new model`, `edit model`, `add test`, `set config`, `macro`, `deps`, `exposure`) mirror real dbt workflows in the simulator.
+
 ## Roadmap
 
 Tracked as levels + engine work, not vapor:
 
-1. Graph mutation commands (`new model`, `set ref`) for lineage-editing levels
+1. Singular SQL tests + unit tests
 2. Circular dependency challenges
-3. Dev vs prod targets and state comparison UI polish
+3. Dev vs prod state UI polish
 4. Level builder + shareable level JSON
 5. Certificate / progress persistence
 
