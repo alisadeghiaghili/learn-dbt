@@ -2,9 +2,8 @@
 
 **Live app:** https://alisadeghiaghili.github.io/learn-dbt/
 
-An interactive dbt visualization and tutorial — the same product shape as
-[learnGitBranching](https://github.com/pcottle/learnGitBranching), rebuilt for
-dbt operations.
+An interactive dbt visualization and tutorial — sandbox, levels, and a command
+terminal for learning dbt operations.
 
 learnGitBranching teaches git by rendering a commit tree and letting you type
 commands until the tree matches the goal. learn-dbt teaches dbt by rendering a
@@ -37,8 +36,10 @@ Production build serves from `/learn-dbt/` (GitHub Pages project site). After ev
 - **Sandbox** — free-play demo shop DAG
 - **Levels** — objective, hint, goal DAG, command golf (cmds vs par)
 - **Terminal** — `dbt ls | run | build | test | seed | compile | source freshness`
-- **Meta** — `help`, `hint`, `levels`, `steps`, `show goal`, `hide goal`, `show solution`, `reset`, `undo`
-- **Coach** — Goal panel lists the official solution commands as a checklist; after each run the terminal prints `Next: …` (same pattern as learn-dvc)
+- **Meta** — `help`, `hint`, `levels`, `steps`, `why`, `show goal`, `hide goal`, `show solution`, `reset`, `undo`
+- **Coach** — Goal panel lists official solution commands as a sticky checklist; current step gets an orange neon ring; after each run the terminal prints `Next: …` or `Progress kept. Still on: …`
+- **Terminal** — bash-like Tab word completion, ghost remainder of the next command, ↑/↓ history, caret stays in the prompt
+- **Progress** — solved levels persist in `localStorage` + cookie; in-progress level work survives mistakes via `sessionStorage`; share posts list what you learned
 - **Celebration** — solving a level opens a success dialog with golf stats and share buttons for LinkedIn, X/Twitter, Facebook, plus a copyable permalink (`?level=<id>`)
 
 ### Selection grammar (the core curriculum)

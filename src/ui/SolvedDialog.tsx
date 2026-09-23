@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { LevelDef } from '../engine/types';
 import { buildShareLinks } from './share';
 import { ConfettiCanvas } from './ConfettiCanvas';
@@ -8,6 +8,10 @@ export interface SolvedInfo {
   level: LevelDef;
   commands: number;
   par?: number;
+  learned?: string[];
+  upNext?: string | null;
+  solvedCount?: number;
+  totalCount?: number;
 }
 
 interface Props {
@@ -20,22 +24,13 @@ interface Props {
 }
 
 /**
- * Level-solved celebration dialog: party entrance, confetti, fanfare, social share.
- *
- * Args:
- *   info: Solved level metadata.
- *   hasNext: Whether a next level exists.
- *   onNext: Load next level.
- *   onReplay: Restart the same level.
- *   onDismiss: Close the dialog.
- *   baseUrl: Optional app origin override for share links.
- * Returns:
- *   Modal celebration UI.
+ * Level-solved celebration: confetti, fanfare, progress share.
+ * Enter on the dialog must not instantly close it (learn-dvc focus fix).
  */
 export function SolvedDialog({ info, hasNext, onNext, onReplay, onDismiss, baseUrl }: Props) {
   const [copied, setCopied] = useState(false);
   const [muted, setMuted] = useState(false);
-  const [pulse, setPulse] = useState(0);
+  const cardRef = useRef<HTMLDivElement>(null);
 
   const share = useMemo(
     () =>
@@ -45,6 +40,8 @@ export function SolvedDialog({ info, hasNext, onNext, onReplay, onDismiss, baseU
         sequence: info.level.sequence,
         commands: info.commands,
         par: info.par,
+        learned: info.learned,
+        upNext: info.upNext,
         baseUrl,
       }),
     [info, baseUrl],
@@ -52,31 +49,42 @@ export function SolvedDialog({ info, hasNext, onNext, onReplay, onDismiss, baseU
 
   useEffect(() => {
     playVictoryFanfare(muted);
-    setPulse((n) => n + 1);
+    cardRef.current?.focus();
   }, [muted, info.level.id, info.commands]);
 
   const golfBadge =
-    info.par && info.commands <= info.par
-      ? 'Par met'
-      : info.par
-        ? `Par ${info.par}`
-        : null;
+    info.par && info.commands <= info.par ? 'Par met' : info.par ? `Par ${info.par}` : null;
 
   const copyLink = async () => {
     try {
-      await navigator.clipboard.writeText(share.url);
+      await navigator.clipboard.writeText(share.linkedinText);
       setCopied(true);
       window.setTimeout(() => setCopied(false), 2000);
     } catch {
-      setCopied(false);
-      window.prompt('Copy share link:', share.url);
+      window.prompt('Copy share post:', share.linkedinText);
     }
   };
 
   return (
-    <div className="modal solved-modal is-party" role="dialog" aria-modal="true" aria-labelledby="solved-title">
+    <div
+      className="modal solved-modal is-party"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="solved-title"
+      onKeyDown={(e) => {
+        // Enter on the dialog chrome must not activate the default button.
+        if (e.key === 'Enter' && e.target === cardRef.current) {
+          e.preventDefault();
+        }
+      }}
+    >
       <ConfettiCanvas active durationMs={5000} />
-      <div className="modal-card solved-card party-in" key={pulse}>
+      <div
+        className="modal-card solved-card party-in"
+        ref={cardRef}
+        tabIndex={-1}
+        role="document"
+      >
         <div className="party-badge" aria-hidden="true">
           <div className="party-ring" />
           <div className="party-medal">
@@ -96,14 +104,31 @@ export function SolvedDialog({ info, hasNext, onNext, onReplay, onDismiss, baseU
             <>
               {' '}
               · par {info.par}
-              {golfBadge ? <span className={`golf-badge ${golfBadge === 'Par met' ? 'is-best' : ''}`}>{golfBadge}</span> : null}
+              {golfBadge ? (
+                <span className={`golf-badge ${golfBadge === 'Par met' ? 'is-best' : ''}`}>
+                  {golfBadge}
+                </span>
+              ) : null}
+            </>
+          ) : null}
+          {info.solvedCount != null && info.totalCount != null ? (
+            <>
+              {' '}
+              · progress {info.solvedCount}/{info.totalCount}
             </>
           ) : null}
         </p>
-        <p className="party-line">Goal met. The DAG is in the state you targeted.</p>
 
         <div className="share-block">
-          <div className="share-title">Share the win</div>
+          <div className="share-title">Share what you learned</div>
+          {info.learned?.length ? (
+            <ul className="learned-list">
+              {info.learned.slice(-6).map((t) => (
+                <li key={t}>{t}</li>
+              ))}
+            </ul>
+          ) : null}
+          {info.upNext ? <p className="up-next">Up next: {info.upNext}</p> : null}
           <div className="share-actions">
             <a className="btn share-li" href={share.linkedin} target="_blank" rel="noopener noreferrer">
               LinkedIn
@@ -115,7 +140,7 @@ export function SolvedDialog({ info, hasNext, onNext, onReplay, onDismiss, baseU
               Facebook
             </a>
             <button type="button" className="btn" onClick={copyLink}>
-              {copied ? 'Link copied' : 'Copy link'}
+              {copied ? 'Copied' : 'Copy post'}
             </button>
             <button
               type="button"
@@ -124,13 +149,14 @@ export function SolvedDialog({ info, hasNext, onNext, onReplay, onDismiss, baseU
                 setMuted((m) => !m);
                 if (muted) playVictoryFanfare(false);
               }}
-              aria-pressed={muted}
             >
               {muted ? 'Sound off' : 'Sound on'}
             </button>
           </div>
-          <div className="share-preview" title={share.text}>
-            {share.text}
+          <div className="share-preview" title={share.linkedinText}>
+            {share.linkedinText.split('\n').map((line, i) => (
+              <div key={i}>{line || ' '}</div>
+            ))}
           </div>
         </div>
 

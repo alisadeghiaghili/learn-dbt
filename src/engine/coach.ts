@@ -17,11 +17,12 @@ function dbtSubcommand(cmd: string): string | null {
 }
 
 /**
- * Map each official solution command to a completion flag so the Goal
- * panel can list commands verbatim (same UX as learn-dvc coach).
+ * Map each official solution command to a sticky completion flag.
+ * A step stays done after it was issued (learn-dvc sticky checklist):
+ * a later wrong command must not rewind earlier ticks.
  *
  * Args:
- *   project: Current project state.
+ *   project: Current project state (commandsIssued drives stickiness).
  *   level: Active level (null/undefined → empty list).
  * Returns:
  *   One status per solution command, in order.
@@ -33,23 +34,37 @@ export function solutionProgress(
   const solution = level?.solution ?? [];
   if (!solution.length) return [];
 
-  return solution.map((command) => stepStatus(project, command));
+  const seen = new Set<string>();
+  for (const c of project.commandsIssued) {
+    seen.add(normalizeCmd(c));
+  }
+
+  return solution.map((command, index) => stepStatus(project, command, index, seen));
 }
 
-function stepStatus(project: ProjectState, command: string): SolutionStepStatus {
+function stepStatus(
+  project: ProjectState,
+  command: string,
+  index: number,
+  issued: Set<string>,
+): SolutionStepStatus {
   const cmd = normalizeCmd(command);
 
   if (project.solved) {
     return { command: cmd, done: true, note: 'goal satisfied' };
   }
 
-  const issuedExact = project.commandsIssued.some((c) => normalizeCmd(c) === cmd);
-  if (issuedExact) {
-    return {
-      command: cmd,
-      done: false,
-      note: 'issued — goal still open (try `show goal`)',
-    };
+  // Sticky: if this official command was already issued, keep the tick.
+  if (issued.has(cmd)) {
+    return { command: cmd, done: true, note: 'already completed' };
+  }
+
+  // Prefix-sticky for later steps only after earlier official commands ran.
+  const priorIssued = project.commandsIssued
+    .map(normalizeCmd)
+    .filter((c) => c === cmd);
+  if (priorIssued.length) {
+    return { command: cmd, done: true, note: 'already completed' };
   }
 
   const sub = dbtSubcommand(cmd);
@@ -59,12 +74,27 @@ function stepStatus(project: ProjectState, command: string): SolutionStepStatus 
       return {
         command: cmd,
         done: false,
-        note: `you ran: ${normalizeCmd(similar)}`,
+        note: `wrong attempt kept — official step still: try again`,
       };
     }
   }
 
+  const isFirstPending = true; // caller highlights current; note only
+  void index;
+  void isFirstPending;
   return { command: cmd, done: false, note: 'not run yet' };
+}
+
+/**
+ * Index of the first unfinished solution step (-1 when none).
+ *
+ * Args:
+ *   steps: Progress list.
+ * Returns:
+ *   Index of current step.
+ */
+export function currentStepIndex(steps: SolutionStepStatus[]): number {
+  return steps.findIndex((s) => !s.done);
 }
 
 /**
@@ -85,17 +115,23 @@ export function coachLine(
     return project.solved ? null : 'Sandbox mode — type `help` for commands.';
   }
 
-  const next = steps.find((s) => !s.done);
-  if (!next) {
+  const idx = currentStepIndex(steps);
+  if (idx < 0) {
     return project.solved
       ? null
       : 'Solution commands were issued but the goal is still open. Type `show goal` to inspect.';
   }
 
-  if (next.note.startsWith('you ran:')) {
-    return `Not solved yet. Official step: ${next.command}  (${next.note})`;
-  }
-  return `Next: ${next.command}`;
+  const next = steps[idx];
+  const lastWrong = project.commandsIssued.length
+    ? normalizeCmd(project.commandsIssued[project.commandsIssued.length - 1])
+    : null;
+  const wrongAttempt =
+    lastWrong && lastWrong !== next.command && !project.solved && project.commandsIssued.length
+      ? `Progress kept. Still on: ${next.command}`
+      : null;
+
+  return wrongAttempt ?? `Next: ${next.command}`;
 }
 
 /**
@@ -115,9 +151,11 @@ export function formatSteps(
   if (!steps.length) {
     return 'No solution steps (sandbox). Type `help` for dbt commands.';
   }
-  const lines = steps.map((s) => {
-    const mark = s.done ? '✓' : '○';
-    return `${mark} ${s.command}    — ${s.note}`;
+  const cur = currentStepIndex(steps);
+  const lines = steps.map((s, i) => {
+    const mark = s.done ? '✓' : i === cur ? '▶' : '○';
+    const chip = i === cur && !s.done ? '  [now]' : '';
+    return `${mark} ${s.command}${chip}    — ${s.note}`;
   });
   const coach = coachLine(project, level);
   if (coach) lines.push('', coach);
