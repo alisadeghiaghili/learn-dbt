@@ -2,6 +2,8 @@
  * Core domain types for the learn-dbt simulator.
  */
 
+export type Row = Record<string, string | number | null>;
+
 export type Layer = 'source' | 'seed' | 'staging' | 'intermediate' | 'mart' | 'exposure' | 'snapshot';
 
 export type Materialization =
@@ -70,6 +72,7 @@ export interface DbtNode {
   partitionBy?: string;
   clusterBy?: string;
   warehouse?: Warehouse;
+  corruption?: 'dup_key' | 'null_key' | 'orphan_fk' | 'bad_enum' | 'clean';
 }
 
 export interface SourceNode {
@@ -139,6 +142,12 @@ export interface ProjectState {
   deadlineAt?: number;
   /** Design drills: created model id set this attempt. */
   designedModels: string[];
+  /** Materialized row fixtures per node id (for data-level tests). */
+  modelRows?: Record<string, Row[]>;
+  /** Count of correct quiz answers this session/project. */
+  quizCorrect: number;
+  /** Transfers: structural score 0-100 for design levels. */
+  transferScore?: number;
 }
 
 export interface NodeSpec {
@@ -166,6 +175,8 @@ export interface NodeSpec {
   partitionBy?: string;
   clusterBy?: string;
   warehouse?: Warehouse;
+  /** Data corruption seed for incident fixtures. */
+  corruption?: 'dup_key' | 'null_key' | 'orphan_fk' | 'bad_enum' | 'clean';
 }
 
 export interface SourceSpec {
@@ -215,6 +226,14 @@ export interface GoalSpec {
   incrementalStrategies?: Record<string, IncrementalStrategy>;
   sqlContains?: Record<string, string>;
   minDiagnoses?: number;
+  /** Minimum correct quiz answers recorded. */
+  quizCorrect?: number;
+  /** Minimum audit errors remaining (usually 0). */
+  maxAuditErrors?: number;
+  /** Transfer: all declared columns must appear in sql. */
+  sqlColumns?: Record<string, string[]>;
+  /** Minimum transfer structure score. */
+  minTransferScore?: number;
   diagnosesInclude?: string[];
   ciSaved?: boolean;
   macroArgs?: Record<string, string[]>;

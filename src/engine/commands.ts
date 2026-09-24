@@ -18,7 +18,8 @@ import {
 import { compileSql } from './sql';
 import { ciRestore, ciSave, diagnose } from './ci';
 import { runAudit } from './audit';
-import { gradeQuiz, reviewQueue } from './quiz';
+import { dueForReview, gradeQuiz, reviewQueue } from './quiz';
+import { ensureRows, evaluateTestOnRows, seedRowsFor } from './data';
 
 export interface CommandResult {
   project: ProjectState;
@@ -81,7 +82,8 @@ function runOne(project: ProjectState, nodeId: string, fullRefresh: boolean): Lo
 
   node.status = 'success';
   node.hasRelation = true;
-  logs.push(log('ok', `OK ${node.materialization} ${node.id}`));
+  ensureRows(project, nodeId);
+  logs.push(log('ok', `OK ${node.materialization} ${node.id} (${(project.modelRows?.[nodeId] ?? []).length} rows)`));
   return logs;
 }
 
@@ -101,9 +103,26 @@ function testOne(project: ProjectState, nodeId: string): LogLine[] {
     return logs;
   }
 
+  // Data-level evaluation (authenticity): unique/not_null/relationships on rows.
+  ensureRows(project, nodeId);
+  const rows = project.modelRows?.[nodeId] ?? [];
+
   for (const t of node.tests) {
-    t.passed = true;
-    logs.push(log('ok', `PASS ${t.type} ${t.id}`));
+    let parentRows: ReturnType<typeof seedRowsFor> | undefined;
+    if (t.type === 'relationships') {
+      const parentId = t.to ?? node.refs[0] ?? node.sourceRefs[0] ?? '';
+      if (parentId) {
+        ensureRows(project, parentId);
+        parentRows = project.modelRows?.[parentId];
+      }
+    }
+    const ok = evaluateTestOnRows(t, rows, parentRows);
+    t.passed = ok;
+    if (ok) {
+      logs.push(log('ok', `PASS ${t.type} ${t.id} (${rows.length} rows)`));
+    } else {
+      logs.push(log('err', `FAIL ${t.type} ${t.id} — assertion failed on ${rows.length} row(s)`));
+    }
   }
   return logs;
 }
@@ -514,17 +533,19 @@ function authoringCommand(
     const g = gradeQuiz(id, choice);
     logs.push(g.correct ? log('ok', 'correct') : log('err', 'incorrect'));
     logs.push(log('meta', g.why));
+    if (g.correct) next.quizCorrect = (next.quizCorrect ?? 0) + 1;
     next.commandsIssued = [...next.commandsIssued, trimmed];
     return complete(next, logs, { counts: true, levelGoal });
   }
 
   if (head === 'review') {
-    const q = reviewQueue().slice(0, 5);
-    logs.push(log('meta', 'review queue (missed items first):'));
+    const due = dueForReview().slice(0, 5);
+    const q = due.length ? due : reviewQueue().slice(0, 5);
+    logs.push(log('meta', due.length ? 'due for spaced review:' : 'review queue (missed first):'));
     for (const item of q) {
       logs.push(log('out', `${item.id}: ${item.q}`));
     }
-    logs.push(log('meta', 'Re-try with `quiz <id> <n>`. Weak items resurface until clean.'));
+    logs.push(log('meta', 'Re-try with `quiz <id> <n>`. Due items resurface after ~24h.'));
     return complete(next, logs, { counts: true, levelGoal });
   }
 

@@ -284,6 +284,39 @@ export function evaluateGoal(project: ProjectState, goal: GoalSpec): GoalEvaluat
     }
   }
 
+  if (goal.quizCorrect != null) {
+    if ((project.quizCorrect ?? 0) < goal.quizCorrect) {
+      reasons.push(`need ${goal.quizCorrect} correct quiz answers, have ${project.quizCorrect ?? 0}`);
+    }
+  }
+  if (goal.maxAuditErrors != null) {
+    // soft structural: model must exist and not be layer-violated via refs
+    for (const n of Object.values(project.nodes)) {
+      if (n.layer === 'mart' && n.sourceRefs.length && goal.maxAuditErrors === 0) {
+        reasons.push(`audit error: mart ${n.id} reads sources`);
+      }
+    }
+  }
+  if (goal.sqlColumns) {
+    for (const [id, cols] of Object.entries(goal.sqlColumns)) {
+      const sql = project.nodes[id]?.sql ?? '';
+      for (const c of cols) {
+        if (!sql.includes(c)) reasons.push(`${id} sql must include column ${c}`);
+      }
+    }
+  }
+  if (goal.minTransferScore != null) {
+    const layers = new Set(Object.values(project.nodes).map((n) => n.layer));
+    let score = 0;
+    if (layers.has('staging')) score += 30;
+    if (layers.has('intermediate')) score += 25;
+    if (layers.has('mart')) score += 30;
+    if (Object.values(project.nodes).some((n) => n.refs.length > 0)) score += 15;
+    if (score < goal.minTransferScore) {
+      reasons.push(`transfer score ${score} < ${goal.minTransferScore}`);
+    }
+  }
+
   const solved = reasons.length === 0;
   return { solved, reasons };
 }

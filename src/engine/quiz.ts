@@ -391,7 +391,22 @@ export function reviewQueue(bank: QuizItem[] = quizBank): QuizItem[] {
     if (ma !== mb) return mb - ma;
     const sa = st.seenAt[a.id] ?? 0;
     const sb = st.seenAt[b.id] ?? 0;
+    // Spaced: older seen items come first among equals
     return sa - sb;
+  });
+}
+
+/**
+ * Items due for retrieval practice (missed, or not seen in 1+ days).
+ */
+export function dueForReview(bank: QuizItem[] = quizBank): QuizItem[] {
+  const st = loadReview();
+  const now = Date.now();
+  const day = 86400000;
+  return reviewQueue(bank).filter((q) => {
+    const seen = st.seenAt[q.id] ?? 0;
+    const miss = st.misses[q.id] ?? 0;
+    return miss > 0 || !seen || now - seen > day;
   });
 }
 

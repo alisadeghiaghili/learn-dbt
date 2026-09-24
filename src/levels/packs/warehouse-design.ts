@@ -187,6 +187,7 @@ export const designLevels: LevelDef[] = [
       modelsExist: ['stg_orders', 'fct_daily_gmv'],
       designLayers: { staging: 1, mart: 1 },
       refs: { fct_daily_gmv: ['stg_orders'] },
+      minTransferScore: 75,
     },
     learning: [
       'Every design question starts with grain and layers.',
@@ -249,6 +250,7 @@ export const designLevels: LevelDef[] = [
     goal: {
       designLayers: { staging: 1, intermediate: 1, mart: 1 },
       modelsExist: ['int_order_payments', 'fct_orders'],
+      minTransferScore: 90,
     },
     learning: [
       'Intermediate is for reshapes too heavy for staging.',

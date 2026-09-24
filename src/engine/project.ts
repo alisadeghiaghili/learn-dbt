@@ -79,7 +79,45 @@ export function createProject(spec: ProjectSpec): ProjectState {
       owner: n.owner,
       snapshotStrategy: n.snapshotStrategy,
       updatedAt: n.updatedAt,
+      corruption: n.corruption,
     };
+  }
+
+  const modelRows: Record<string, Array<Record<string, string | number | null>>> = {};
+  for (const s of Object.values(sources)) {
+    modelRows[s.id] = [
+      { id: 0, order_id: 0, customer_id: 0, amount: 10, status: 'placed', updated_at: '2024-01-01' },
+      { id: 1, order_id: 1, customer_id: 1, amount: 20, status: 'shipped', updated_at: '2024-01-02' },
+      { id: 2, order_id: 2, customer_id: 2, amount: 30, status: 'canceled', updated_at: '2024-01-03' },
+    ];
+  }
+  for (const [id, node] of Object.entries(nodes)) {
+    if (node.corruption) {
+      // filled below via seedRowsFor-like corruption
+    }
+    modelRows[id] ??= [
+      { id: 0, order_id: 0, customer_id: 0, amount: 10, status: 'placed', updated_at: '2024-01-01' },
+      { id: 1, order_id: 1, customer_id: 1, amount: 20, status: 'shipped', updated_at: '2024-01-02' },
+    ];
+    if (node.corruption === 'dup_key') {
+      modelRows[id] = [...modelRows[id]!, { ...modelRows[id]![0]! }];
+    }
+    if (node.corruption === 'null_key') {
+      modelRows[id] = modelRows[id]!.map((r, i) =>
+        i === 0 ? { ...r, id: null, order_id: null } : r,
+      );
+    }
+    if (node.corruption === 'orphan_fk') {
+      modelRows[id] = [
+        ...modelRows[id]!,
+        { id: 99, order_id: 99, customer_id: 999, amount: 1, status: 'placed', updated_at: '2024-01-09' },
+      ];
+    }
+    if (node.corruption === 'bad_enum') {
+      modelRows[id] = modelRows[id]!.map((r, i) =>
+        i === 0 ? { ...r, status: 'unknown_status' } : r,
+      );
+    }
   }
 
   return {
@@ -104,6 +142,9 @@ export function createProject(spec: ProjectSpec): ProjectState {
       ? Date.now() + spec.deadlineSeconds * 1000
       : undefined,
     designedModels: [],
+    modelRows,
+    quizCorrect: 0,
+    transferScore: 0,
   };
 }
 

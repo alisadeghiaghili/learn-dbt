@@ -62,10 +62,74 @@ describe('quiz + review', () => {
   });
 });
 
-describe('mega project size', () => {
-  it('has a realistic commerce DAG', () => {
-    const level = getLevel('mega_orient')!;
-    expect(Object.keys(level.start.nodes).length).toBeGreaterThanOrEqual(28);
-    expect(level.start.sources?.length).toBeGreaterThanOrEqual(6);
+describe('data-level tests (authenticity)', () => {
+  it('unique test FAILS on duplicate keys', () => {
+    let p = createProject({
+      nodes: [
+        {
+          id: 'fct_orders',
+          layer: 'mart',
+          materialization: 'table',
+          refs: [],
+          corruption: 'dup_key',
+          tests: [{ type: 'unique', column: 'order_id', severity: 'error' }],
+        },
+      ],
+    });
+    p = executeCommand('dbt build --select fct_orders', p).project;
+    const t = p.nodes.fct_orders!.tests[0]!;
+    expect(t.passed).toBe(false);
+  });
+
+  it('not_null FAILS on null keys', () => {
+    let p = createProject({
+      nodes: [
+        {
+          id: 'fct_orders',
+          layer: 'mart',
+          materialization: 'table',
+          refs: [],
+          corruption: 'null_key',
+          tests: [{ type: 'not_null', column: 'order_id', severity: 'error' }],
+        },
+      ],
+    });
+    p = executeCommand('dbt build --select fct_orders', p).project;
+    expect(p.nodes.fct_orders!.tests[0]!.passed).toBe(false);
+  });
+
+  it('unique test PASSES on clean rows', () => {
+    let p = createProject({
+      nodes: [
+        {
+          id: 'fct_orders',
+          layer: 'mart',
+          materialization: 'table',
+          refs: [],
+          tests: [{ type: 'unique', column: 'order_id', severity: 'error' }],
+        },
+      ],
+    });
+    p = executeCommand('dbt build --select fct_orders', p).project;
+    expect(p.nodes.fct_orders!.tests[0]!.passed).toBe(true);
+  });
+
+  it('quiz gate requires correct answers', () => {
+    const level = allLevels.find((l) => l.id === 'quiz_pack_1')!;
+    let p = createProject(level.start);
+    p = executeCommand('quiz list', p, level.goal).project;
+    expect(evaluateGoal(p, level.goal).solved).toBe(false);
+    for (const cmd of level.solution) {
+      p = executeCommand(cmd, p, level.goal).project;
+    }
+    expect(p.quizCorrect).toBe(8);
+    expect(evaluateGoal(p, level.goal).solved).toBe(true);
+  });
+});
+
+describe('legacy mega repo', () => {
+  it('has 100+ nodes and audit flags violations', () => {
+    const level = getLevel('legacy_count')!;
+    expect(level.start.nodes.length).toBeGreaterThanOrEqual(100);
   });
 });

@@ -63,6 +63,16 @@ export function newModel(
   };
   logs.push(log('ok', `created model ${id} [${layer}/${next.nodes[id].materialization}]`));
   next.designedModels = [...(next.designedModels ?? []), id];
+  // Transfer scoring: reward a real layer cake (staging → intermediate → mart).
+  const layers = new Set(
+    Object.values(next.nodes).map((n) => n.layer),
+  );
+  let score = 0;
+  if (layers.has('staging')) score += 30;
+  if (layers.has('intermediate')) score += 25;
+  if (layers.has('mart')) score += 30;
+  if (Object.values(next.nodes).some((n) => n.refs.length)) score += 15;
+  next.transferScore = score;
   return { project: next, logs, ok: true };
 }
 

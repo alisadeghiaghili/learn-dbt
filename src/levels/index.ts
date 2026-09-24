@@ -4,7 +4,7 @@ import { testingLevels } from './packs/testing';
 import { jinjaLevels, modelingLevels } from './packs/jinja-modeling';
 import { advancedJinjaLevels, assessmentLevels, incidentLevels } from './packs/advanced';
 import { designLevels, examLevels, warehouseLevels } from './packs/warehouse-design';
-import { fidelityLevels, megaLevels, quizLevels } from './packs/mega-quiz';
+import { fidelityLevels, legacyLevels, megaLevels, quizLevels } from './packs/mega-quiz';
 
 /** Shared e-commerce demo warehouse used by intro + selection levels. */
 export function demoShopSpec(): ProjectSpec {
@@ -535,6 +535,7 @@ export const allLevels: LevelDef[] = [
   ...megaLevels,
   ...quizLevels,
   ...fidelityLevels,
+  ...legacyLevels,
 ].map((l) => ({
   ...l,
   ...(levelCoaching[l.id] ?? {}),

@@ -315,16 +315,16 @@ export const quizLevels: LevelDef[] = [
     sequence: 'quiz',
     name: 'QUIZ: foundations (8 items)',
     objective:
-      'Answer 8 conceptual questions via `quiz <id> <choiceIndex>`.\n\n' +
+      'Answer **8 questions correctly** via `quiz <id> <choiceIndex>`.\n\n' +
       'Type `quiz list` to see items. Example: `quiz q_grain 0`.\n\n' +
-      'Goal: 5 correct hits recorded (adaptive bank).',
+      'Wrong answers do not unlock the level. This is a real gate.',
     hint: 'quiz list',
     solution: quizBank
       .slice(0, 8)
       .map((q) => `quiz ${q.id} ${q.answer}`),
     start: { nodes: [] },
     goal: {
-      minDiagnoses: 0,
+      quizCorrect: 8,
       mustRunCommand: 'quiz',
     },
     learning: [
@@ -336,13 +336,14 @@ export const quizLevels: LevelDef[] = [
     sequence: 'quiz',
     name: 'QUIZ: ops & warehouse (8 items)',
     objective:
-      'Grill on incremental, contracts, slim CI, partitions, snapshots.\n\n`quiz list` then answer with `quiz <id> <n>`.',
+      'Eight more **correct** answers on incremental, contracts, slim CI, partitions, snapshots.',
     hint: 'quiz list',
     solution: quizBank
       .slice(8, 16)
       .map((q) => `quiz ${q.id} ${q.answer}`),
     start: { nodes: [] },
     goal: {
+      quizCorrect: 8,
       mustRunCommand: 'quiz',
     },
     learning: ['Interview bar: explain merge vs append without notes.'],
@@ -350,12 +351,13 @@ export const quizLevels: LevelDef[] = [
   {
     id: 'quiz_pack_3',
     sequence: 'quiz',
-    name: 'QUIZ: remaining bank',
-    objective: 'Finish the bank. Use `review` anytime to resurface weak items first.',
+    name: 'QUIZ: remaining bank (9+ correct)',
+    objective: 'Finish with **9+ correct** on the rest of the bank. Use `review` to resurface weak items.',
     hint: 'review',
     solution: quizBank.slice(16).map((q) => `quiz ${q.id} ${q.answer}`),
     start: { nodes: [] },
     goal: {
+      quizCorrect: 9,
       mustRunCommand: 'quiz',
     },
     learning: ['`review` is spaced repetition — weak items float to the top.'],
@@ -366,12 +368,13 @@ export const quizLevels: LevelDef[] = [
     sequence: 'quiz',
     name: 'REVIEW: weak items first',
     objective:
-      'Type `review` to list the adaptive queue (missed items first), then answer one weak item.\n\n' +
-      'This level completes when you have used `review` and `quiz` at least once.',
+      'Type `review` (list adaptive queue), then answer **one** item correctly with `quiz`.\n\n' +
+      'Requires `quizCorrect >= 1` and `review` issued.',
     hint: 'review',
     solution: ['review', 'quiz q_grain 0'],
     start: { nodes: [] },
     goal: {
+      quizCorrect: 1,
       mustRunCommand: 'review',
     },
     learning: [
@@ -380,7 +383,138 @@ export const quizLevels: LevelDef[] = [
   },
 ];
 
-/** Contract vs declared columns fidelity drill. */
+function legacyProject() {
+  const base = shop40();
+  const extra: typeof base.nodes = [];
+  // Generate 70 more models with a few deliberate legacy violations.
+  for (let i = 0; i < 40; i++) {
+    extra.push({
+      id: `stg_sys_${i}`,
+      layer: 'staging' as const,
+      materialization: 'view' as const,
+      sourceRefs: ['raw.orders'],
+      owner: 'legacy-team',
+    });
+  }
+  for (let i = 0; i < 20; i++) {
+    extra.push({
+      id: `int_sys_${i}`,
+      layer: 'intermediate' as const,
+      materialization: 'view' as const,
+      refs: [`stg_sys_${i}`, `stg_sys_${(i + 1) % 40}`],
+      owner: 'legacy-team',
+    });
+  }
+  for (let i = 0; i < 10; i++) {
+    extra.push({
+      id: `mart_sys_${i}`,
+      layer: 'mart' as const,
+      materialization: 'table' as const,
+      refs: [`int_sys_${i}`],
+      owner: 'legacy-team',
+      description: 'Legacy mart.',
+    });
+  }
+  // Legacy violations
+  const bad = [
+    {
+      id: 'orders_clean', // missing stg_ prefix
+      layer: 'staging' as const,
+      materialization: 'view' as const,
+      sourceRefs: ['raw.orders'],
+    },
+    {
+      id: 'fct_raw_leak', // mart reads source
+      layer: 'mart' as const,
+      materialization: 'table' as const,
+      sourceRefs: ['raw.payments'],
+      refs: [] as string[],
+    },
+  ];
+  return {
+    ...base,
+    nodes: [...base.nodes, ...extra, ...bad],
+  };
+}
+
+export const legacyLevels: LevelDef[] = [
+  {
+    id: 'legacy_count',
+    sequence: 'mega',
+    name: 'MEGA: 100+ model repo',
+    objective:
+      'The legacy warehouse is loaded (~110 models). Count marts with `dbt ls --select path:models/marts`.',
+    hint: 'dbt ls --select path:models/marts',
+    solution: ['dbt ls --select path:models/marts'],
+    start: legacyProject(),
+    goal: {
+      mustRunCommand: 'path:models/marts',
+    },
+    learning: [
+      'At 100+ models, tribal knowledge dies. Selection + docs + audit are survival tools.',
+    ],
+    fieldNotes: ['Repos this size need automated style gates in CI.'],
+  },
+  {
+    id: 'legacy_audit_fix',
+    sequence: 'mega',
+    name: 'MEGA: fix legacy layer leak',
+    objective:
+      '`audit` flags `fct_raw_leak` (mart reads sources). Fix the layer violation and audit again.\n\n' +
+      '`edit model fct_raw_leak ref=stg_payments` · `audit`',
+    hint: 'edit model fct_raw_leak ref=stg_payments then audit',
+    solution: ['edit model fct_raw_leak ref=stg_payments', 'audit'],
+    start: {
+      ...legacyProject(),
+      nodes: legacyProject().nodes.map((n) =>
+        n.id === 'fct_raw_leak'
+          ? { ...n, sourceRefs: ['raw.payments'], refs: [] as string[] }
+          : n,
+      ),
+    },
+    goal: {
+      maxAuditErrors: 0,
+      refs: { fct_raw_leak: ['stg_payments'] },
+      mustRunCommand: 'audit',
+    },
+    learning: ['audit --strict on every PR is how 100-model repos stay navigable.'],
+  },
+  {
+    id: 'legacy_data_grain',
+    sequence: 'mega',
+    name: 'MEGA: data-level grain failure',
+    objective:
+      '`fct_orders` has **duplicate order_id** in the warehouse (dup_key corruption).\n\n' +
+      'Add `unique` on `order_id`, run `dbt test --select fct_orders`, and watch it FAIL on data.\n\n' +
+      'Then understand: you cannot “fix” this with a command — the upstream dedupe is the real fix.',
+    hint: 'add test unique fct_orders col=order_id',
+    solution: [
+      'add test unique fct_orders col=order_id',
+      'dbt test --select fct_orders',
+    ],
+    start: {
+      nodes: [
+        {
+          id: 'fct_orders',
+          layer: 'mart',
+          materialization: 'table',
+          refs: [],
+          owner: 'ae',
+          corruption: 'dup_key',
+        },
+      ],
+    },
+    goal: {
+      testsDefined: [{ model: 'fct_orders', type: 'unique', column: 'order_id' }],
+      mustRunCommand: 'test',
+    },
+    learning: [
+      'This is the authenticity gap most tutorials ignore: tests must fail on bad data.',
+      'Our simulator now evaluates rows — unique on dup_key FAILS.',
+    ],
+    fieldNotes: ['If your tests always pass, you do not have tests.'],
+  },
+];
 export const fidelityLevels: LevelDef[] = [
   {
     id: 'fid_contract_cols',
