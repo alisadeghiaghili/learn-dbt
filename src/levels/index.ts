@@ -3,6 +3,7 @@ import { foundationLevels } from './packs/foundation';
 import { testingLevels } from './packs/testing';
 import { jinjaLevels, modelingLevels } from './packs/jinja-modeling';
 import { advancedJinjaLevels, assessmentLevels, incidentLevels } from './packs/advanced';
+import { designLevels, examLevels, warehouseLevels } from './packs/warehouse-design';
 
 /** Shared e-commerce demo warehouse used by intro + selection levels. */
 export function demoShopSpec(): ProjectSpec {
@@ -527,6 +528,9 @@ export const allLevels: LevelDef[] = [
   ...advancedJinjaLevels,
   ...incidentLevels,
   ...assessmentLevels,
+  ...warehouseLevels,
+  ...designLevels,
+  ...examLevels,
 ].map((l) => ({
   ...l,
   ...(levelCoaching[l.id] ?? {}),
@@ -585,6 +589,21 @@ export const sequences: { id: string; title: string; about: string }[] = [
     id: 'assessment',
     title: 'Assessment',
     about: 'Singular/unit tests + graded capstone (build, diagnose, CI).',
+  },
+  {
+    id: 'warehouse',
+    title: 'Warehouse design',
+    about: 'BQ partition/cluster, Snowflake merge keys, Redshift sort, snapshot config.',
+  },
+  {
+    id: 'design',
+    title: 'Design drills',
+    about: 'Turn a requirement sentence into a correct layer cake DAG.',
+  },
+  {
+    id: 'exam',
+    title: 'Timed exams',
+    about: 'Scored sprints with 100-point rubric and a clock.',
   },
 ];
 

@@ -99,6 +99,11 @@ export function createProject(spec: ProjectSpec): ProjectState {
     ciState: spec.ciState ?? null,
     incidentId: spec.incidentId,
     diagnoses: [],
+    warehouse: spec.warehouse ?? 'bq',
+    deadlineAt: spec.deadlineSeconds
+      ? Date.now() + spec.deadlineSeconds * 1000
+      : undefined,
+    designedModels: [],
   };
 }
 

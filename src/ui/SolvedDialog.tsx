@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { LevelDef } from '../engine/types';
+import type { LevelDef, ProjectState, RubricItem } from '../engine/types';
+import { scoreRubric } from '../engine/compare';
 import { buildShareLinks } from './share';
 import { ConfettiCanvas } from './ConfettiCanvas';
 import { playVictoryFanfare } from './celebrate';
@@ -12,6 +13,10 @@ export interface SolvedInfo {
   upNext?: string | null;
   solvedCount?: number;
   totalCount?: number;
+  /** For exam score panel. */
+  project?: ProjectState;
+  rubric?: RubricItem[];
+  elapsedSec?: number;
 }
 
 interface Props {
@@ -54,6 +59,11 @@ export function SolvedDialog({ info, hasNext, onNext, onReplay, onDismiss, baseU
 
   const golfBadge =
     info.par && info.commands <= info.par ? 'Par met' : info.par ? `Par ${info.par}` : null;
+
+  const score = useMemo(() => {
+    if (!info.rubric?.length || !info.project) return null;
+    return scoreRubric(info.project, info.level.goal, info.rubric);
+  }, [info.rubric, info.project, info.level.goal]);
 
   const copyLink = async () => {
     try {
@@ -118,6 +128,27 @@ export function SolvedDialog({ info, hasNext, onNext, onReplay, onDismiss, baseU
             </>
           ) : null}
         </p>
+
+        {score ? (
+          <div className="score-block">
+            <div className="score-head">
+              <span className="share-title">Exam score</span>
+              <span className="score-num">
+                {score.earned}/{score.max}
+                {info.elapsedSec != null ? ` · ${info.elapsedSec}s` : ''}
+              </span>
+            </div>
+            <ul className="score-list">
+              {score.items.map((it) => (
+                <li key={it.id} className={it.hit ? 'is-hit' : 'is-miss'}>
+                  <span>{it.hit ? '✓' : '○'}</span>
+                  <span>{it.label}</span>
+                  <span className="pts">{it.points}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
 
         <div className="share-block">
           <div className="share-title">Share what you learned</div>

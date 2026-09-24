@@ -10,6 +10,7 @@ import type {
   Materialization,
   ProjectState,
   TestType,
+  Warehouse,
 } from './types';
 
 function log(kind: LogLine['kind'], text: string): LogLine {
@@ -61,6 +62,7 @@ export function newModel(
     sql: opts.sql ?? 'select 1 as id',
   };
   logs.push(log('ok', `created model ${id} [${layer}/${next.nodes[id].materialization}]`));
+  next.designedModels = [...(next.designedModels ?? []), id];
   return { project: next, logs, ok: true };
 }
 
@@ -157,6 +159,11 @@ export function setConfig(
     declaredColumns?: string[];
     owner?: string;
     description?: string;
+    partitionBy?: string;
+    clusterBy?: string;
+    warehouse?: Warehouse;
+    snapshotStrategy?: 'timestamp' | 'check';
+    snapshotConfig?: string;
   },
 ): { project: ProjectState; logs: LogLine[]; ok: boolean } {
   const logs: LogLine[] = [];
@@ -171,8 +178,13 @@ export function setConfig(
   if (opts.declaredColumns) n.declaredColumns = opts.declaredColumns;
   if (opts.owner) n.owner = opts.owner;
   if (opts.description) n.description = opts.description;
+  if (opts.partitionBy) n.partitionBy = opts.partitionBy;
+  if (opts.clusterBy) n.clusterBy = opts.clusterBy;
+  if (opts.warehouse) n.warehouse = opts.warehouse;
+  if (opts.snapshotStrategy) n.snapshotStrategy = opts.snapshotStrategy;
+  if (opts.snapshotConfig) n.snapshotConfig = opts.snapshotConfig;
   n.modified = true;
-  logs.push(log('ok', `configured ${id}`, ));
+  logs.push(log('ok', `configured ${id}`));
   return { project: next, logs, ok: true };
 }
 
@@ -181,13 +193,19 @@ export function defineMacro(
   name: string,
   body: string,
   args?: string[],
+  file?: string,
 ): { project: ProjectState; logs: LogLine[] } {
   const next = cloneProject(project);
-  const macro: MacroDef = { name, body, args };
+  const macro: MacroDef = {
+    name,
+    body,
+    args,
+    file: file ?? `macros/${name}.sql`,
+  };
   next.macros[name] = macro;
   return {
     project: next,
-    logs: [log('ok', `defined macro ${name}${args?.length ? `(${args.join(', ')})` : ''}`)],
+    logs: [log('ok', `defined macro ${name}${args?.length ? `(${args.join(', ')})` : ''} → ${macro.file}`)],
   };
 }
 

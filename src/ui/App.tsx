@@ -89,6 +89,16 @@ export function App() {
   const liveLayout = useMemo(() => layoutDag(project, project.lastSelection), [project]);
 
   const par = level.solution.length;
+  const [timerSec, setTimerSec] = useState(level.timeLimitSec ?? 0);
+
+  useEffect(() => {
+    if (!level.timeLimitSec) return;
+    setTimerSec(level.timeLimitSec);
+    const t = window.setInterval(() => {
+      setTimerSec((s) => (s > 0 ? s - 1 : 0));
+    }, 1000);
+    return () => window.clearInterval(t);
+  }, [level.id, level.timeLimitSec]);
   const steps = useMemo(() => solutionProgress(project, level), [project, level]);
   const coach = useMemo(() => coachLine(project, level), [project, level]);
   const currentIdx = currentStepIndex(steps);
@@ -303,6 +313,19 @@ export function App() {
                 })(),
                 solvedCount: new Set([...loadSolvedList(), lv.id]).size,
                 totalCount: allLevels.length,
+                project,
+                rubric: lv.rubric,
+                elapsedSec: lv.timeLimitSec
+                  ? Math.max(
+                      0,
+                      lv.timeLimitSec -
+                        Math.round(
+                          ((project.deadlineAt ?? 0) -
+                            (Date.now() - lv.timeLimitSec * 1000)) /
+                            1000,
+                        ),
+                    )
+                  : undefined,
               }
             : s.solved,
         };
@@ -363,6 +386,11 @@ export function App() {
             cmds {project.commandCount}
             {par ? ` / par ${par}` : ''}
           </span>
+          {level.timeLimitSec ? (
+            <span className={`timer-chip${timerSec <= 30 ? ' is-low' : ''}`}>
+              ⏱ {Math.floor(timerSec / 60)}:{String(timerSec % 60).padStart(2, '0')}
+            </span>
+          ) : null}
         </div>
         <div className="top-actions">
           <button type="button" className="btn" onClick={() => loadLevel('sandbox')}>

@@ -16,6 +16,8 @@ export type Materialization =
 
 export type IncrementalStrategy = 'append' | 'delete+insert' | 'merge' | 'microbatch';
 
+export type Warehouse = 'bq' | 'snowflake' | 'redshift' | 'postgres' | 'duckdb';
+
 export type NodeStatus = 'pending' | 'success' | 'error' | 'skipped';
 
 export type TestType =
@@ -62,7 +64,12 @@ export interface DbtNode {
   description?: string;
   owner?: string;
   snapshotStrategy?: 'timestamp' | 'check';
+  snapshotConfig?: string;
   updatedAt?: string;
+  /** BigQuery style clustering/partitioning (and Snowflake equivalents). */
+  partitionBy?: string;
+  clusterBy?: string;
+  warehouse?: Warehouse;
 }
 
 export interface SourceNode {
@@ -80,6 +87,8 @@ export interface MacroDef {
   name: string;
   body: string;
   args?: string[];
+  /** macros/ file path for multi-file packages. */
+  file?: string;
 }
 
 export interface ExposureDef {
@@ -101,6 +110,12 @@ export interface CiState {
   graphHash: string;
 }
 
+export interface RubricItem {
+  id: string;
+  label: string;
+  points: number;
+}
+
 export interface ProjectState {
   nodes: Record<string, DbtNode>;
   sources: Record<string, SourceNode>;
@@ -118,6 +133,12 @@ export interface ProjectState {
   ciState: CiState | null;
   incidentId?: string;
   diagnoses: string[];
+  /** Active warehouse dialect for strategy guidance. */
+  warehouse: Warehouse;
+  /** Timed exam: deadline epoch ms. */
+  deadlineAt?: number;
+  /** Design drills: created model id set this attempt. */
+  designedModels: string[];
 }
 
 export interface NodeSpec {
@@ -140,7 +161,11 @@ export interface NodeSpec {
   description?: string;
   owner?: string;
   snapshotStrategy?: 'timestamp' | 'check';
+  snapshotConfig?: string;
   updatedAt?: string;
+  partitionBy?: string;
+  clusterBy?: string;
+  warehouse?: Warehouse;
 }
 
 export interface SourceSpec {
@@ -160,8 +185,10 @@ export interface ProjectSpec {
   packages?: string[];
   vars?: Record<string, string>;
   target?: string;
+  warehouse?: Warehouse;
   ciState?: CiState;
   incidentId?: string;
+  deadlineSeconds?: number;
 }
 
 export type GoalBuiltMode = 'exactly' | 'atLeast' | 'none';
@@ -187,16 +214,22 @@ export interface GoalSpec {
   contracts?: string[];
   incrementalStrategies?: Record<string, IncrementalStrategy>;
   sqlContains?: Record<string, string>;
-  /** At least N diagnosis notes recorded (incident drills). */
   minDiagnoses?: number;
-  /** Required diagnosis keywords. */
   diagnosesInclude?: string[];
-  /** CI artifact must exist. */
   ciSaved?: boolean;
-  /** Macro must declare these args. */
   macroArgs?: Record<string, string[]>;
-  /** Jinja constructs required in model sql. */
   sqlRequires?: Record<string, 'for' | 'if' | 'set' | 'macro'>;
+  /** Warehouse physical design. */
+  partitionBy?: Record<string, string>;
+  clusterBy?: Record<string, string>;
+  warehouseIs?: Warehouse;
+  /** Macro written to macros/<file>. */
+  macroFiles?: Record<string, string>;
+  snapshotConfigs?: Record<string, string>;
+  /** Design drills: at least N models created in layer X. */
+  designLayers?: Partial<Record<Layer, number>>;
+  /** Graded rubric items (each must be satisfied — mapped loosely via other fields). */
+  rubric?: RubricItem[];
 }
 
 export interface LevelDialogSlide {
@@ -217,4 +250,7 @@ export interface LevelDef {
   learning?: string[];
   fieldNotes?: string[];
   disabledCommands?: string[];
+  /** Timed exam (seconds). */
+  timeLimitSec?: number;
+  rubric?: RubricItem[];
 }

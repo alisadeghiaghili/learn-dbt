@@ -238,8 +238,85 @@ export function evaluateGoal(project: ProjectState, goal: GoalSpec): GoalEvaluat
     }
   }
 
+  if (goal.partitionBy) {
+    for (const [id, col] of Object.entries(goal.partitionBy)) {
+      if (project.nodes[id]?.partitionBy !== col) {
+        reasons.push(`${id} should partition by ${col}`);
+      }
+    }
+  }
+  if (goal.clusterBy) {
+    for (const [id, col] of Object.entries(goal.clusterBy)) {
+      if (project.nodes[id]?.clusterBy !== col) {
+        reasons.push(`${id} should cluster by ${col}`);
+      }
+    }
+  }
+  if (goal.warehouseIs && project.warehouse !== goal.warehouseIs) {
+    reasons.push(`warehouse should be ${goal.warehouseIs}`);
+  }
+  if (goal.macroFiles) {
+    for (const [name, file] of Object.entries(goal.macroFiles)) {
+      const m = project.macros[name];
+      if (!m) reasons.push(`macro missing: ${name}`);
+      else if (m.file && !m.file.includes(file)) {
+        reasons.push(`macro ${name} should live in ${file}`);
+      }
+    }
+  }
+  if (goal.snapshotConfigs) {
+    for (const [id, cfg] of Object.entries(goal.snapshotConfigs)) {
+      const n = project.nodes[id];
+      if (!n?.snapshotConfig?.includes(cfg) && n?.snapshotStrategy !== cfg) {
+        reasons.push(`${id} snapshot config should include ${cfg}`);
+      }
+    }
+  }
+  if (goal.designLayers) {
+    for (const [layer, min] of Object.entries(goal.designLayers)) {
+      const count = Object.values(project.nodes).filter((n) => n.layer === layer).length;
+      if (count < (min ?? 0)) {
+        reasons.push(`need at least ${min} ${layer} model(s), have ${count}`);
+      }
+    }
+    if ((project.designedModels?.length ?? 0) < 2) {
+      reasons.push('create models from the requirement (at least 2 new nodes)');
+    }
+  }
+
   const solved = reasons.length === 0;
   return { solved, reasons };
+}
+
+/** Score a level against its rubric (exam UI). */
+export function scoreRubric(
+  project: ProjectState,
+  goal: GoalSpec,
+  rubric: { id: string; label: string; points: number }[],
+): { earned: number; max: number; items: { id: string; label: string; points: number; hit: boolean }[] } {
+  const eval0 = evaluateGoal(project, goal);
+  const failed = new Set(eval0.reasons);
+  // Map rubric ids to roughly which goal reasons they cover
+  const items = rubric.map((r) => {
+    const hit =
+      r.id.startsWith('diag')
+        ? (project.diagnoses?.length ?? 0) > 0
+        : r.id.startsWith('ci')
+          ? Boolean(project.ciState)
+          : r.id.startsWith('docs')
+            ? project.docsBuilt
+            : r.id.startsWith('test')
+              ? Object.values(project.nodes).some((n) => n.tests.length > 0)
+              : r.id.startsWith('model')
+                ? Object.keys(project.nodes).length >= 2
+                : r.id.startsWith('contract')
+                  ? Object.values(project.nodes).some((n) => n.contract)
+                  : failed.size === 0 || !eval0.reasons.some((x) => x.toLowerCase().includes(r.id.slice(0, 4)));
+    return { ...r, hit };
+  });
+  const earned = items.filter((i) => i.hit).reduce((a, b) => a + b.points, 0);
+  const max = items.reduce((a, b) => a + b.points, 0);
+  return { earned, max, items };
 }
 
 function testPasses(project: ProjectState, key: string): boolean {

@@ -117,17 +117,19 @@ Goal fields: `built` / `builtMode` (`exactly` | `atLeast` | `none`),
 | Advanced Jinja | set/if/for, macro args, is_incremental, package pinning |
 | Incident drills | 20 production failures: diagnose root cause, minimal fix |
 | Assessment | singular/unit tests + graded capstone (build, diagnose, CI) |
+| Warehouse design | BQ partition/cluster, Snowflake merge, Redshift sort, snapshot config |
+| Design drills | requirement sentence → correct layer cake DAG |
+| Timed exams | scored sprints, 100-point rubric, clock in the toolbar |
 
-Authoring commands (`new model`, `edit model`, `add test`, `set config`, `macro`, `deps`, `exposure`, `diagnose`, `ci save/restore`) mirror real dbt workflows in the simulator.
+Authoring commands (`new model`, `edit model`, `add test`, `set config`, `macro`, `deps`, `exposure`, `diagnose`, `ci save/restore`, `warehouse`) mirror real dbt workflows in the simulator.
 
 ## Roadmap
 
 Tracked as levels + engine work, not vapor:
 
-1. Warehouse-specific strategies (BigQuery partitions, Snowflake merge keys)
-2. Level builder + shareable level JSON
-3. Certificate / progress persistence
-4. Multi-step timed exams with scoring UI
+1. Level builder + shareable level JSON
+2. Certificate / multi-day learning plan
+3. Adaptive question bank from weak rubric items
 
 ## License
 

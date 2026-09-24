@@ -148,7 +148,8 @@ export function executeCommand(
     head === 'target' ||
     head === 'exposure' ||
     head === 'diagnose' ||
-    head === 'ci'
+    head === 'ci' ||
+    head === 'warehouse'
   ) {
     return authoringCommand(trimmed, project, levelGoal);
   }
@@ -474,6 +475,13 @@ function authoringCommand(
     return complete(next, logs, { counts: false });
   }
 
+  if (head === 'warehouse' && tokens[1]) {
+    const wh = tokens[1] as ProjectState['warehouse'];
+    next.warehouse = wh;
+    logs.push(log('ok', `warehouse → ${wh}`));
+    return complete(next, logs, { counts: true, levelGoal });
+  }
+
   if (head === 'set' && tokens[1] === 'config' && tokens[2]) {
     const id = tokens[2]!;
     const map = splitNamedArgs(tokens.slice(3), trimmed);
@@ -486,6 +494,11 @@ function authoringCommand(
       declaredColumns: map.get('cols')?.split(','),
       owner: map.get('owner'),
       description: map.get('desc'),
+      partitionBy: map.get('partition'),
+      clusterBy: map.get('cluster'),
+      warehouse: map.get('wh') as never,
+      snapshotStrategy: map.get('snap') as never,
+      snapshotConfig: map.get('snapconfig'),
     });
     logs.push(...r.logs);
     return complete(r.project, logs, { counts: true, levelGoal });
@@ -495,8 +508,11 @@ function authoringCommand(
     const body = trimmed.replace(/^macro\s+add\s+\S+\s*/i, '');
     const argMatch = body.match(/^args=([^\s]+)\s*/i);
     const args = argMatch ? argMatch[1]!.split(',').filter(Boolean) : undefined;
-    const restBody = argMatch ? body.slice(argMatch[0].length) : body;
-    const r = defineMacro(next, tokens[2]!, restBody || 'select 1', args);
+    let restBody = argMatch ? body.slice(argMatch[0].length) : body;
+    const fileMatch = restBody.match(/^file=([^\s]+)\s*/i);
+    const file = fileMatch ? fileMatch[1]! : undefined;
+    if (fileMatch) restBody = restBody.slice(fileMatch[0].length);
+    const r = defineMacro(next, tokens[2]!, restBody || 'select 1', args, file);
     logs.push(...r.logs);
     return complete(r.project, logs, { counts: true, levelGoal });
   }
