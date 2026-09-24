@@ -96,6 +96,9 @@ export function createProject(spec: ProjectSpec): ProjectState {
     logs: [],
     solved: false,
     commandsIssued: [],
+    ciState: spec.ciState ?? null,
+    incidentId: spec.incidentId,
+    diagnoses: [],
   };
 }
 

@@ -2,6 +2,7 @@ import type { LevelDef, LevelDialogSlide, ProjectSpec } from '../engine/types';
 import { foundationLevels } from './packs/foundation';
 import { testingLevels } from './packs/testing';
 import { jinjaLevels, modelingLevels } from './packs/jinja-modeling';
+import { advancedJinjaLevels, assessmentLevels, incidentLevels } from './packs/advanced';
 
 /** Shared e-commerce demo warehouse used by intro + selection levels. */
 export function demoShopSpec(): ProjectSpec {
@@ -523,6 +524,9 @@ export const allLevels: LevelDef[] = [
   ...testingLevels,
   ...jinjaLevels,
   ...modelingLevels,
+  ...advancedJinjaLevels,
+  ...incidentLevels,
+  ...assessmentLevels,
 ].map((l) => ({
   ...l,
   ...(levelCoaching[l.id] ?? {}),
@@ -566,6 +570,21 @@ export const sequences: { id: string; title: string; about: string }[] = [
     id: 'modeling',
     title: 'Modeling & ops',
     about: 'Layers, fact/dim, ownership, targets, capstone pipeline.',
+  },
+  {
+    id: 'advanced',
+    title: 'Advanced Jinja',
+    about: 'set/if/for, macro args, is_incremental, package pinning.',
+  },
+  {
+    id: 'incidents',
+    title: 'Incident drills',
+    about: '20 production failures: diagnose root cause, then minimal fix.',
+  },
+  {
+    id: 'assessment',
+    title: 'Assessment',
+    about: 'Singular/unit tests + graded capstone (build, diagnose, CI).',
   },
 ];
 

@@ -194,6 +194,50 @@ export function evaluateGoal(project: ProjectState, goal: GoalSpec): GoalEvaluat
     }
   }
 
+  if (goal.minDiagnoses != null) {
+    if ((project.diagnoses?.length ?? 0) < goal.minDiagnoses) {
+      reasons.push(`record at least ${goal.minDiagnoses} diagnosis note(s)`);
+    }
+  }
+  if (goal.diagnosesInclude?.length) {
+    const blob = (project.diagnoses ?? []).join(' ').toLowerCase();
+    for (const kw of goal.diagnosesInclude) {
+      if (!blob.includes(kw.toLowerCase())) {
+        reasons.push(`diagnosis should mention: ${kw}`);
+      }
+    }
+  }
+  if (goal.ciSaved && !project.ciState) {
+    reasons.push('run `ci save` to create the state artifact');
+  }
+  if (goal.macroArgs) {
+    for (const [name, args] of Object.entries(goal.macroArgs)) {
+      const m = project.macros[name];
+      if (!m) {
+        reasons.push(`macro missing: ${name}`);
+        continue;
+      }
+      const have = m.args ?? [];
+      for (const a of args) {
+        if (!have.includes(a)) reasons.push(`macro ${name} missing arg ${a}`);
+      }
+    }
+  }
+  if (goal.sqlRequires) {
+    for (const [id, need] of Object.entries(goal.sqlRequires)) {
+      const sql = project.nodes[id]?.sql ?? '';
+      const ok =
+        need === 'for'
+          ? /\{%\s*for\s+/.test(sql)
+          : need === 'if'
+            ? /\{%\s*if\s+/.test(sql)
+            : need === 'set'
+              ? /\{%\s*set\s+/.test(sql)
+              : /\{\{\s*[a-zA-Z_]/.test(sql);
+      if (!ok) reasons.push(`${id} sql must use jinja {% ${need} %}`);
+    }
+  }
+
   const solved = reasons.length === 0;
   return { solved, reasons };
 }

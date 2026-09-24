@@ -114,18 +114,20 @@ Goal fields: `built` / `builtMode` (`exactly` | `atLeast` | `none`),
 | Tests & contracts | unique, not_null, relationships, accepted_values, severity, contracts, SCD, seeds, freshness |
 | Jinja & packages | vars, macros, packages, incremental strategies, exposures, docs |
 | Modeling & ops | layers, fact/dim, ownership, targets, capstone pipeline |
+| Advanced Jinja | set/if/for, macro args, is_incremental, package pinning |
+| Incident drills | 20 production failures: diagnose root cause, minimal fix |
+| Assessment | singular/unit tests + graded capstone (build, diagnose, CI) |
 
-Authoring commands (`new model`, `edit model`, `add test`, `set config`, `macro`, `deps`, `exposure`) mirror real dbt workflows in the simulator.
+Authoring commands (`new model`, `edit model`, `add test`, `set config`, `macro`, `deps`, `exposure`, `diagnose`, `ci save/restore`) mirror real dbt workflows in the simulator.
 
 ## Roadmap
 
 Tracked as levels + engine work, not vapor:
 
-1. Singular SQL tests + unit tests
-2. Circular dependency challenges
-3. Dev vs prod state UI polish
-4. Level builder + shareable level JSON
-5. Certificate / progress persistence
+1. Warehouse-specific strategies (BigQuery partitions, Snowflake merge keys)
+2. Level builder + shareable level JSON
+3. Certificate / progress persistence
+4. Multi-step timed exams with scoring UI
 
 ## License
 

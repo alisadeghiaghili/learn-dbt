@@ -108,7 +108,15 @@ export function addTest(
   project: ProjectState,
   modelId: string,
   type: TestType,
-  opts: { column?: string; to?: string; config?: string; severity?: 'error' | 'warn' } = {},
+  opts: {
+    column?: string;
+    to?: string;
+    config?: string;
+    severity?: 'error' | 'warn';
+    sql?: string;
+    fixture?: string;
+    kind?: 'generic' | 'singular' | 'unit';
+  } = {},
 ): { project: ProjectState; logs: LogLine[]; ok: boolean } {
   const logs: LogLine[] = [];
   const node = project.nodes[modelId];
@@ -117,6 +125,9 @@ export function addTest(
   const next = cloneProject(project);
   const n = next.nodes[modelId]!;
   const id = `${modelId}.${opts.column ?? type}.${n.tests.length}`;
+  const kind =
+    opts.kind ??
+    (type === 'unit' ? 'unit' : type === 'singular' || type === 'custom' ? 'singular' : 'generic');
   n.tests.push({
     id,
     type,
@@ -124,11 +135,13 @@ export function addTest(
     to: opts.to,
     config: opts.config,
     severity: opts.severity ?? 'error',
-    kind: type === 'custom' ? 'singular' : 'generic',
+    kind,
+    sql: opts.sql,
+    fixture: opts.fixture,
     passed: undefined,
   });
   n.modified = true;
-  logs.push(log('ok', `added test ${type}${opts.column ? ` on ${opts.column}` : ''} → ${modelId}`));
+  logs.push(log('ok', `added ${kind} test ${type}${opts.column ? ` on ${opts.column}` : ''} → ${modelId}`));
   return { project: next, logs, ok: true };
 }
 
@@ -167,11 +180,15 @@ export function defineMacro(
   project: ProjectState,
   name: string,
   body: string,
+  args?: string[],
 ): { project: ProjectState; logs: LogLine[] } {
   const next = cloneProject(project);
-  const macro: MacroDef = { name, body };
+  const macro: MacroDef = { name, body, args };
   next.macros[name] = macro;
-  return { project: next, logs: [log('ok', `defined macro ${name}`)] };
+  return {
+    project: next,
+    logs: [log('ok', `defined macro ${name}${args?.length ? `(${args.join(', ')})` : ''}`)],
+  };
 }
 
 export function installPackage(

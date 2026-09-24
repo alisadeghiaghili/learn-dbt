@@ -26,10 +26,12 @@ export function parseSql(sql: string): ParsedSql {
   const sourceRefs = new Set<string>();
   const macroCall = new Set<string>();
 
-  for (const m of sql.matchAll(/\{\{\s*ref\(\s*['"]([^'"]+)['"]\s*\)\s*\}\}/g)) {
+  for (const m of sql.matchAll(/\{\{\s*ref\(\s*['"]?([^'"\s)]+)['"]?\s*\)\s*\}\}/g)) {
     refs.add(m[1]!);
   }
-  for (const m of sql.matchAll(/\{\{\s*source\(\s*['"]([^'"]+)['"]\s*,\s*['"]([^'"]+)['"]\s*\)\s*\}\}/g)) {
+  for (const m of sql.matchAll(
+    /\{\{\s*source\(\s*['"]?([^'"\s)]+)['"]?\s*,\s*['"]?([^'"\s)]+)['"]?\s*\)\s*\}\}/g,
+  )) {
     sourceRefs.add(`${m[1]}.${m[2]}`);
   }
   for (const m of sql.matchAll(/\{\{\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*\(/g)) {

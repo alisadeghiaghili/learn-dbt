@@ -8,3 +8,6 @@ export * from './coach';
 export * from './teach';
 export * from './sql';
 export * from './mutate';
+export * from './jinja';
+export * from './ci';
+export * from './incidents';

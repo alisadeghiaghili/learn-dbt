@@ -16,6 +16,7 @@ import {
   useTarget,
 } from './mutate';
 import { compileSql } from './sql';
+import { ciRestore, ciSave, diagnose } from './ci';
 
 export interface CommandResult {
   project: ProjectState;
@@ -145,7 +146,9 @@ export function executeCommand(
     head === 'deps' ||
     head === 'var' ||
     head === 'target' ||
-    head === 'exposure'
+    head === 'exposure' ||
+    head === 'diagnose' ||
+    head === 'ci'
   ) {
     return authoringCommand(trimmed, project, levelGoal);
   }
@@ -441,9 +444,34 @@ function authoringCommand(
       to: map.get('to'),
       config: map.get('config'),
       severity: map.get('severity') as never,
+      sql: map.get('sql'),
+      fixture: map.get('fixture'),
+      kind: map.get('kind') as never,
     });
     logs.push(...r.logs);
     return complete(r.project, logs, { counts: true, levelGoal });
+  }
+
+  if (head === 'diagnose') {
+    const note = trimmed.replace(/^diagnose\s+/i, '');
+    const r = diagnose(next, note);
+    logs.push(...r.logs);
+    return complete(r.project, logs, { counts: true, levelGoal });
+  }
+
+  if (head === 'ci') {
+    if (tokens[1] === 'save') {
+      const r = ciSave(next);
+      logs.push(...r.logs);
+      return complete(r.project, logs, { counts: true, levelGoal });
+    }
+    if (tokens[1] === 'restore') {
+      const r = ciRestore(next);
+      logs.push(...r.logs);
+      return complete(r.project, logs, { counts: true, levelGoal });
+    }
+    logs.push(log('err', 'usage: ci save | ci restore'));
+    return complete(next, logs, { counts: false });
   }
 
   if (head === 'set' && tokens[1] === 'config' && tokens[2]) {
@@ -465,7 +493,10 @@ function authoringCommand(
 
   if (head === 'macro' && tokens[1] === 'add' && tokens[2]) {
     const body = trimmed.replace(/^macro\s+add\s+\S+\s*/i, '');
-    const r = defineMacro(next, tokens[2]!, body || 'select 1');
+    const argMatch = body.match(/^args=([^\s]+)\s*/i);
+    const args = argMatch ? argMatch[1]!.split(',').filter(Boolean) : undefined;
+    const restBody = argMatch ? body.slice(argMatch[0].length) : body;
+    const r = defineMacro(next, tokens[2]!, restBody || 'select 1', args);
     logs.push(...r.logs);
     return complete(r.project, logs, { counts: true, levelGoal });
   }

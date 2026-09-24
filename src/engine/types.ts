@@ -24,19 +24,21 @@ export type TestType =
   | 'relationships'
   | 'accepted_values'
   | 'expression_is_true'
-  | 'custom';
+  | 'custom'
+  | 'unit'
+  | 'singular';
 
 export interface DbtTest {
   id: string;
   type: TestType;
   column?: string;
   to?: string;
-  /** accepted_values list or expression body. */
   config?: string;
   severity: 'error' | 'warn';
   passed?: boolean;
-  /** singular tests owned by a model id */
   kind?: 'generic' | 'singular' | 'unit';
+  sql?: string;
+  fixture?: string;
 }
 
 export interface DbtNode {
@@ -52,16 +54,13 @@ export interface DbtNode {
   status: NodeStatus;
   modified: boolean;
   hasRelation: boolean;
-  /** Model SQL body (may contain ref()/source()/jinja). */
   sql?: string;
   incrementalStrategy?: IncrementalStrategy;
   uniqueKey?: string;
-  /** Enforced model contract (columns must be declared). */
   contract?: boolean;
   declaredColumns?: string[];
   description?: string;
   owner?: string;
-  /** Snapshot config */
   snapshotStrategy?: 'timestamp' | 'check';
   updatedAt?: string;
 }
@@ -80,6 +79,7 @@ export interface SourceNode {
 export interface MacroDef {
   name: string;
   body: string;
+  args?: string[];
 }
 
 export interface ExposureDef {
@@ -94,6 +94,13 @@ export interface LogLine {
   text: string;
 }
 
+export interface CiState {
+  savedAt: string;
+  builtIds: string[];
+  modifiedIds: string[];
+  graphHash: string;
+}
+
 export interface ProjectState {
   nodes: Record<string, DbtNode>;
   sources: Record<string, SourceNode>;
@@ -102,13 +109,15 @@ export interface ProjectState {
   packages: string[];
   vars: Record<string, string>;
   target: string;
-  /** Docs have been generated at least once. */
   docsBuilt: boolean;
   commandCount: number;
   lastSelection: string[];
   logs: LogLine[];
   solved: boolean;
   commandsIssued: string[];
+  ciState: CiState | null;
+  incidentId?: string;
+  diagnoses: string[];
 }
 
 export interface NodeSpec {
@@ -151,6 +160,8 @@ export interface ProjectSpec {
   packages?: string[];
   vars?: Record<string, string>;
   target?: string;
+  ciState?: CiState;
+  incidentId?: string;
 }
 
 export type GoalBuiltMode = 'exactly' | 'atLeast' | 'none';
@@ -165,7 +176,6 @@ export interface GoalSpec {
   mustRunCommand?: string;
   selectionIncludes?: string[];
   selectionEquals?: string[];
-  /** Structural goals for authored content. */
   modelsExist?: string[];
   testsDefined?: { model: string; type: TestType; column?: string }[];
   macrosDefined?: string[];
@@ -177,6 +187,16 @@ export interface GoalSpec {
   contracts?: string[];
   incrementalStrategies?: Record<string, IncrementalStrategy>;
   sqlContains?: Record<string, string>;
+  /** At least N diagnosis notes recorded (incident drills). */
+  minDiagnoses?: number;
+  /** Required diagnosis keywords. */
+  diagnosesInclude?: string[];
+  /** CI artifact must exist. */
+  ciSaved?: boolean;
+  /** Macro must declare these args. */
+  macroArgs?: Record<string, string[]>;
+  /** Jinja constructs required in model sql. */
+  sqlRequires?: Record<string, 'for' | 'if' | 'set' | 'macro'>;
 }
 
 export interface LevelDialogSlide {
