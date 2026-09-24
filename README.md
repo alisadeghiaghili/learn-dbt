@@ -120,8 +120,11 @@ Goal fields: `built` / `builtMode` (`exactly` | `atLeast` | `none`),
 | Warehouse design | BQ partition/cluster, Snowflake merge, Redshift sort, snapshot config |
 | Design drills | requirement sentence → correct layer cake DAG |
 | Timed exams | scored sprints, 100-point rubric, clock in the toolbar |
+| Mega project | 35-node commerce warehouse: blast radius, audit, slim CI |
+| Concept quiz | mental models + adaptive spaced review (`quiz`, `review`) |
+| Compile fidelity | contracts vs SQL columns; declared interface must exist |
 
-Authoring commands (`new model`, `edit model`, `add test`, `set config`, `macro`, `deps`, `exposure`, `diagnose`, `ci save/restore`, `warehouse`) mirror real dbt workflows in the simulator.
+Authoring commands (`new model`, `edit model`, `add test`, `set config`, `macro`, `deps`, `exposure`, `diagnose`, `ci save/restore`, `warehouse`, `audit`, `quiz`, `review`) mirror real dbt workflows in the simulator.
 
 ## Roadmap
 
@@ -129,7 +132,7 @@ Tracked as levels + engine work, not vapor:
 
 1. Level builder + shareable level JSON
 2. Certificate / multi-day learning plan
-3. Adaptive question bank from weak rubric items
+3. Live warehouse adapters (optional, out of browser sandbox)
 
 ## License
 

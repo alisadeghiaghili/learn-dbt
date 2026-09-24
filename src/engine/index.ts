@@ -11,3 +11,5 @@ export * from './mutate';
 export * from './jinja';
 export * from './ci';
 export * from './incidents';
+export * from './audit';
+export * from './quiz';

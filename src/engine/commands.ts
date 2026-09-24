@@ -17,6 +17,8 @@ import {
 } from './mutate';
 import { compileSql } from './sql';
 import { ciRestore, ciSave, diagnose } from './ci';
+import { runAudit } from './audit';
+import { gradeQuiz, reviewQueue } from './quiz';
 
 export interface CommandResult {
   project: ProjectState;
@@ -149,7 +151,10 @@ export function executeCommand(
     head === 'exposure' ||
     head === 'diagnose' ||
     head === 'ci' ||
-    head === 'warehouse'
+    head === 'warehouse' ||
+    head === 'audit' ||
+    head === 'quiz' ||
+    head === 'review'
   ) {
     return authoringCommand(trimmed, project, levelGoal);
   }
@@ -479,6 +484,47 @@ function authoringCommand(
     const wh = tokens[1] as ProjectState['warehouse'];
     next.warehouse = wh;
     logs.push(log('ok', `warehouse → ${wh}`));
+    return complete(next, logs, { counts: true, levelGoal });
+  }
+
+  if (head === 'audit') {
+    const strict = tokens.includes('--strict');
+    const r = runAudit(next, strict);
+    logs.push(...r.logs);
+    return complete(r.project, logs, { counts: true, levelGoal });
+  }
+
+  if (head === 'quiz') {
+    if (!tokens[1] || tokens[1] === 'list') {
+      const q = reviewQueue().slice(0, 8);
+      logs.push(log('meta', 'quiz bank (weak first):'));
+      for (const item of q) {
+        logs.push(log('out', `${item.id} [${item.topic}] ${item.q}`));
+        item.choices.forEach((c, i) => logs.push(log('out', `  ${i}) ${c}`)));
+      }
+      logs.push(log('meta', 'answer with: quiz <id> <choiceIndex>'));
+      return complete(next, logs, { counts: true, levelGoal });
+    }
+    const id = tokens[1]!;
+    const choice = Number(tokens[2]);
+    if (Number.isNaN(choice)) {
+      logs.push(log('err', 'usage: quiz <id> <choiceIndex>'));
+      return complete(next, logs, { counts: false });
+    }
+    const g = gradeQuiz(id, choice);
+    logs.push(g.correct ? log('ok', 'correct') : log('err', 'incorrect'));
+    logs.push(log('meta', g.why));
+    next.commandsIssued = [...next.commandsIssued, trimmed];
+    return complete(next, logs, { counts: true, levelGoal });
+  }
+
+  if (head === 'review') {
+    const q = reviewQueue().slice(0, 5);
+    logs.push(log('meta', 'review queue (missed items first):'));
+    for (const item of q) {
+      logs.push(log('out', `${item.id}: ${item.q}`));
+    }
+    logs.push(log('meta', 'Re-try with `quiz <id> <n>`. Weak items resurface until clean.'));
     return complete(next, logs, { counts: true, levelGoal });
   }
 

@@ -4,6 +4,7 @@ import { testingLevels } from './packs/testing';
 import { jinjaLevels, modelingLevels } from './packs/jinja-modeling';
 import { advancedJinjaLevels, assessmentLevels, incidentLevels } from './packs/advanced';
 import { designLevels, examLevels, warehouseLevels } from './packs/warehouse-design';
+import { fidelityLevels, megaLevels, quizLevels } from './packs/mega-quiz';
 
 /** Shared e-commerce demo warehouse used by intro + selection levels. */
 export function demoShopSpec(): ProjectSpec {
@@ -531,6 +532,9 @@ export const allLevels: LevelDef[] = [
   ...warehouseLevels,
   ...designLevels,
   ...examLevels,
+  ...megaLevels,
+  ...quizLevels,
+  ...fidelityLevels,
 ].map((l) => ({
   ...l,
   ...(levelCoaching[l.id] ?? {}),
@@ -604,6 +608,21 @@ export const sequences: { id: string; title: string; about: string }[] = [
     id: 'exam',
     title: 'Timed exams',
     about: 'Scored sprints with 100-point rubric and a clock.',
+  },
+  {
+    id: 'mega',
+    title: 'Mega project',
+    about: '35-node commerce warehouse: blast radius, audit, slim CI.',
+  },
+  {
+    id: 'quiz',
+    title: 'Concept quiz',
+    about: 'Mental models + adaptive spaced review of weak items.',
+  },
+  {
+    id: 'fidelity',
+    title: 'Compile fidelity',
+    about: 'Contracts vs SQL columns; declared interface must exist in the body.',
   },
 ];
 
