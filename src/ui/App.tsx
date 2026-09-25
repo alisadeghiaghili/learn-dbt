@@ -382,113 +382,114 @@ export function App() {
 
   return (
     <div className="app">
-      <Toolbar
-        levelTitle={level.name}
-        levelSeq={level.sequence}
-        cmds={project.commandCount}
-        par={par}
-        onLevels={() => setSession((s) => ({ ...s, showLevels: true }))}
-        onGuide={() => {
-          document.querySelector('.guide-panel')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-          document.querySelector('.guide-panel')?.classList.add('is-flash');
-          window.setTimeout(() => {
-            document.querySelector('.guide-panel')?.classList.remove('is-flash');
-          }, 1200);
-        }}
-        onHint={() => onRun('hint')}
-        onSolution={() => onRun('show solution')}
-        onUndo={() => onRun('undo')}
-        onReset={() => onRun('reset')}
-        onSandbox={() => loadLevel('sandbox')}
-        onHelp={() => setSession((s) => ({ ...s, showHelp: true }))}
-        onLocaleChange={() => setLocaleTick((n: number) => n + 1)}
-      />
-      {level.timeLimitSec ? (
-        <div className="timer-row">
-          <span className={`timer-chip${timerSec <= 30 ? ' is-low' : ''}`}>
-            {Math.floor(timerSec / 60)}:{String(timerSec % 60).padStart(2, '0')}
-          </span>
+      <div className="app-main">
+        <Toolbar
+          levelTitle={level.name}
+          levelSeq={level.sequence}
+          cmds={project.commandCount}
+          par={par}
+          onLevels={() => setSession((s) => ({ ...s, showLevels: true }))}
+          onGuide={() => {
+            document.querySelector('.guide-panel')?.classList.add('is-flash');
+            window.setTimeout(() => {
+              document.querySelector('.guide-panel')?.classList.remove('is-flash');
+            }, 700);
+          }}
+          onHint={() => onRun('hint')}
+          onSolution={() => onRun('show solution')}
+          onUndo={() => onRun('undo')}
+          onReset={() => onRun('reset')}
+          onSandbox={() => loadLevel('sandbox')}
+          onHelp={() => setSession((s) => ({ ...s, showHelp: true }))}
+          onLocaleChange={() => setLocaleTick((n: number) => n + 1)}
+        />
+        {level.timeLimitSec ? (
+          <div className="timer-row">
+            <span className={`timer-chip${timerSec <= 30 ? ' is-low' : ''}`}>
+              {Math.floor(timerSec / 60)}:{String(timerSec % 60).padStart(2, '0')}
+            </span>
+          </div>
+        ) : null}
+
+        <div className="workspace">
+          <main className={`canvas-panel${session.solved ? ' is-celebrating' : ''}`}>
+            <DagView layout={liveLayout} title="Project DAG" celebrating={Boolean(session.solved)} />
+          </main>
         </div>
-      ) : null}
 
-      <div className="workspace">
-        <main className={`canvas-panel${session.solved ? ' is-celebrating' : ''}`}>
-          <DagView layout={liveLayout} title="Project DAG" celebrating={Boolean(session.solved)} />
-        </main>
-
-        <aside className="side-panel guide-panel">
-          <section className="side-block">
-            <h2>{ui().youAreLearning}</h2>
-            <p>{level.objective}</p>
-            {level.learning?.length ? (
-              <ul className="learn-list">
-                {level.learning.map((t) => (
-                  <li key={t}>{t}</li>
-                ))}
-              </ul>
-            ) : null}
-          </section>
-          {level.solution.length ? (
-            <section className="side-block">
-              <h2>{ui().checklist}</h2>
-              <ol className="sol-steps">
-                {steps.map((s, i) => (
-                  <li
-                    key={`${s.command}-${i}`}
-                    className={`${s.done ? 'is-done' : ''}${i === currentIdx && !s.done ? ' is-current' : ''}`}
-                  >
-                    {i === currentIdx && !s.done ? <span className="now-chip">{ui().nowChip}</span> : null}
-                    <code>{s.command}</code>
-                    <span className="step-note">{s.note}</span>
-                  </li>
-                ))}
-              </ol>
-              {coach ? <p className="coach-line">{coach}</p> : null}
-              <p className="par-note">
-                Checklist is sticky — wrong commands do not rewind ticks. Also:{' '}
-                <code>steps</code> · <code>hint</code> · <code>why</code>
-              </p>
-            </section>
-          ) : (
-            <section className="side-block">
-              <h2>{ui().sandbox}</h2>
-              <p className="coach-line">{coach ?? 'Type `help` for commands.'}</p>
-            </section>
-          )}
-          {session.showHint ? (
-            <section className="side-block">
-              <h2>{ui().hintLabel}</h2>
-              <p className="mono">{level.hint}</p>
-            </section>
-          ) : null}
-          {session.showGoal ? (
-            <section className="side-block">
-              <DagView layout={goalLayout} title="Goal (reference)" ghost />
-            </section>
-          ) : null}
-          <section className="side-block">
-            <h2>{ui().companionSql}</h2>
-            <p className="field-note">{ui().companionSqlBody}</p>
-          </section>
-          <section className="side-block">
-            <h2>{ui().fieldNotes}</h2>
-            <p className="field-note">
-              {level.fieldNotes?.length
-                ? level.fieldNotes.join('\n\n')
-                : 'Selection and lineage mistakes are the usual production incidents in analytics engineering. Prefer `dbt build` on the critical path; slim CI with `status:modified+` when the warehouse is large.'}
-            </p>
-          </section>
-        </aside>
+        <Terminal
+          logs={project.logs}
+          onRun={onRun}
+          history={session.history}
+          nextHint={nextHint}
+          completions={[...level.solution, ...steps.map((s) => s.command)]}
+          autoFocus={!session.solved}
+        />
       </div>
 
-      <Terminal
-        logs={project.logs}
-        onRun={onRun}
-        history={session.history}
-        nextHint={nextHint}
-        completions={[...level.solution, ...steps.map((s) => s.command)]}
-        autoFocus={!session.solved}
-      />
+      <aside className="side-panel guide-panel">
+        <section className="side-block">
+          <h2>{ui().youAreLearning}</h2>
+          <p>{level.objective}</p>
+          {level.learning?.length ? (
+            <ul className="learn-list">
+              {level.learning.map((t) => (
+                <li key={t}>{t}</li>
+              ))}
+            </ul>
+          ) : null}
+        </section>
+        {level.solution.length ? (
+          <section className="side-block">
+            <h2>{ui().checklist}</h2>
+            <ol className="sol-steps">
+              {steps.map((s, i) => (
+                <li
+                  key={`${s.command}-${i}`}
+                  className={`${s.done ? 'is-done' : ''}${i === currentIdx && !s.done ? ' is-current' : ''}`}
+                >
+                  {i === currentIdx && !s.done ? <span className="now-chip">{ui().nowChip}</span> : null}
+                  <code>{s.command}</code>
+                  <span className="step-note">{s.note}</span>
+                </li>
+              ))}
+            </ol>
+            {coach ? <p className="coach-line">{coach}</p> : null}
+            <p className="par-note">
+              Checklist is sticky — wrong commands do not rewind ticks. Also:{' '}
+              <code>steps</code> · <code>hint</code> · <code>why</code>
+            </p>
+          </section>
+        ) : (
+          <section className="side-block">
+            <h2>{ui().sandbox}</h2>
+            <p className="coach-line">{coach ?? 'Type `help` for commands.'}</p>
+          </section>
+        )}
+        {session.showHint ? (
+          <section className="side-block">
+            <h2>{ui().hintLabel}</h2>
+            <p className="mono">{level.hint}</p>
+          </section>
+        ) : null}
+        {session.showGoal ? (
+          <section className="side-block">
+            <DagView layout={goalLayout} title="Goal (reference)" ghost />
+          </section>
+        ) : null}
+        <section className="side-block">
+          <h2>{ui().companionSql}</h2>
+          <p className="field-note">{ui().companionSqlBody}</p>
+        </section>
+        <section className="side-block">
+          <h2>{ui().fieldNotes}</h2>
+          <p className="field-note">
+            {level.fieldNotes?.length
+              ? level.fieldNotes.join('\n\n')
+              : 'Selection and lineage mistakes are the usual production incidents in analytics engineering. Prefer `dbt build` on the critical path; slim CI with `status:modified+` when the warehouse is large.'}
+          </p>
+        </section>
+      </aside>
 
       {session.solved ? (
         <SolvedDialog

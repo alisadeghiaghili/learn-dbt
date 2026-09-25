@@ -52,7 +52,7 @@ export function Toolbar(props: ToolbarProps) {
   return (
     <header className="toolbar" ref={rootRef}>
       <div className="brand">
-        learn<span>-dbt</span>
+        learn<span>dbt</span>
       </div>
       <div className="level-title">
         <span className="level-seq">{props.levelSeq}</span>
