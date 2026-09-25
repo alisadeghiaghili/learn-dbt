@@ -110,7 +110,11 @@ export function Toolbar(props: ToolbarProps) {
           <span className="nav-bars" aria-hidden="true" />
         </button>
 
-        <div className={`nav-drawer${navOpen ? ' is-open' : ''}`} id="nav-drawer" hidden={!navOpen}>
+        <div
+          className={`nav-drawer${navOpen ? ' is-open' : ''}`}
+          id="nav-drawer"
+          data-open={navOpen ? '1' : '0'}
+        >
           <button type="button" onClick={() => act(props.onLevels)}>
             {u.levels}
           </button>

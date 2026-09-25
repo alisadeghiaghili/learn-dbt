@@ -31,6 +31,7 @@ export function DagView({ layout, title, ghost = false, celebrating = false }: P
         viewBox={`0 0 ${layout.width} ${layout.height}`}
         role="img"
         aria-label={title ?? 'dbt DAG'}
+        style={{ direction: 'ltr' }}
       >
         <defs>
           <marker
@@ -95,10 +96,10 @@ export function DagView({ layout, title, ghost = false, celebrating = false }: P
                 strokeWidth={n.selected || party ? 2.5 : 1.5}
               />
               <rect x={n.x} y={n.y} width={6} height={44} rx={2} fill={fill} />
-              <text x={n.x + 14} y={n.y + 18} className="dag-label" fill="var(--ink)">
-                {truncate(n.label, 16)}
+              <text x={n.x + 14} y={n.y + 18} className="dag-label" fill="var(--ink)" direction="ltr">
+                {truncate(n.label, 18)}
               </text>
-              <text x={n.x + 14} y={n.y + 34} className="dag-meta" fill="var(--muted)">
+              <text x={n.x + 14} y={n.y + 34} className="dag-meta" fill="var(--muted)" direction="ltr">
                 {n.materialization}
                 {n.status === 'success' ? ' · built' : n.status === 'error' ? ' · error' : ''}
               </text>
@@ -111,5 +112,8 @@ export function DagView({ layout, title, ghost = false, celebrating = false }: P
 }
 
 function truncate(s: string, n: number): string {
-  return s.length <= n ? s : s.slice(0, n - 1) + '…';
+  return s.length <= n ? s : s.slice(0, Math.max(1, n - 1)) + '…';
 }
+
+// Model names are technical English — keep them LTR even in RTL UI.
+
