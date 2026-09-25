@@ -11,6 +11,7 @@ import {
   quizLevels,
   transferSqlLevels,
 } from './packs/mega-quiz';
+import { craftLevels } from './packs/craft';
 
 /** Shared e-commerce demo warehouse used by intro + selection levels. */
 export function demoShopSpec(): ProjectSpec {
@@ -543,6 +544,7 @@ export const allLevels: LevelDef[] = [
   ...fidelityLevels,
   ...legacyLevels,
   ...transferSqlLevels,
+  ...craftLevels,
 ].map((l) => ({
   ...l,
   ...(levelCoaching[l.id] ?? {}),
@@ -636,6 +638,11 @@ export const sequences: { id: string; title: string; about: string }[] = [
     id: 'transfer',
     title: 'SQL transfer',
     about: 'Write real SQL; structural rubric + row evaluation on compile.',
+  },
+  {
+    id: 'craft',
+    title: 'Craft & interview',
+    about: 'Grain answers, SLI bundles, severity, blast radius, handoff packet.',
   },
 ];
 

@@ -467,6 +467,14 @@ export function App() {
             </section>
           ) : null}
           <section className="side-block">
+            <h2>Companion — SQL craft</h2>
+            <p className="field-note">
+              Full SQL writing (joins, windows, query craft) is the companion course{' '}
+              <strong>learn-sql</strong> (Projects/learn-sql). Here SQL only appears where it
+              carries dbt structure: ref(), grain, incremental filters.
+            </p>
+          </section>
+          <section className="side-block">
             <h2>Field notes</h2>
             <p className="field-note">
               {level.fieldNotes?.length

@@ -29,6 +29,13 @@ npm run build
 
 Production build serves from `/learn-dbt/` (GitHub Pages project site). After every push to `main`, GitHub Actions runs tests and deploys `dist/` to Pages.
 
+## Companion: SQL craft
+
+**learn-dbt teaches dbt operations and analytics engineering judgment.**  
+Deep SQL writing (joins, window functions, query plans, “write this query from scratch”) is **not** this course — use the companion **`learn-sql`** project (same machine: `Projects/learn-sql`).
+
+Here you only write SQL where it carries **dbt structure** (`ref()`, grain columns, incremental filters). Full SQL fluency belongs in learn-sql.
+
 ## What you can do in the app
 
 - **Sandbox** — free-play demo shop DAG
@@ -125,7 +132,8 @@ Goal fields: `built` / `builtMode` (`exactly` | `atLeast` | `none`),
 | Compile fidelity | contracts vs SQL columns; declared interface must exist |
 | Data-level tests | unique/not_null/relationships evaluate rows — they fail on bad data |
 | Legacy mega repo | 100+ models with naming/layer violations to find and fix |
-| SQL transfer | write real SQL; `scoresql` structural rubric; `dbt compile` evals rows |
+| SQL transfer | structure/`scoresql` for dbt models — **full SQL craft lives in `learn-sql`** |
+| Craft & interview | grain answers, SLI bundles, severity, blast radius, handoff packet |
 
 Authoring commands (`new model`, `edit model`, `add test`, `set config`, `macro`, `deps`, `exposure`, `diagnose`, `ci save/restore`, `warehouse`, `audit`, `quiz`, `review`) mirror real dbt workflows in the simulator.
 

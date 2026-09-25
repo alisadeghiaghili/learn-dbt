@@ -617,7 +617,8 @@ export const transferSqlLevels: LevelDef[] = [
     },
     learning: [
       'Grain columns and filters are part of the interface, not style.',
-      'scoresql is the structural rubric for free-form SQL.',
+      'scoresql is the structural rubric for free-form SQL in dbt.',
+      'Deep SQL craft (joins, windows) → companion course learn-sql.',
     ],
   },
   {
