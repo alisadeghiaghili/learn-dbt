@@ -27,6 +27,11 @@ import {
   saveSolvedList,
 } from './progress';
 import { levelIdFromSearch, markLevelSolved } from './share';
+import { initLocale, ui } from '../i18n';
+import { Toolbar } from './Toolbar';
+import { HelpModal } from './HelpModal';
+
+initLocale();
 
 type Mode = 'sandbox' | 'level';
 
@@ -39,6 +44,7 @@ interface Session {
   showHint: boolean;
   showLevels: boolean;
   showDialog: boolean;
+  showHelp: boolean;
   solved: SolvedInfo | null;
   undoStack: ProjectState[];
 }
@@ -53,6 +59,7 @@ function startLevelSession(level: LevelDef, restore = true): Session {
     showHint: false,
     showLevels: false,
     showDialog: Boolean(level.dialog?.length),
+    showHelp: false,
     solved: null,
     undoStack: [],
   };
@@ -80,6 +87,7 @@ export function App() {
   const [session, setSession] = useState<Session>(initialState);
   const [solvedList, setSolvedList] = useState<string[]>(() => loadSolvedList());
   const [welcome, setWelcome] = useState<string | null>(null);
+  const [, setLocaleTick] = useState(0);
   const sessionRef = useRef(session);
   sessionRef.current = session;
 
@@ -374,42 +382,34 @@ export function App() {
 
   return (
     <div className="app">
-      <header className="topbar">
-        <div className="brand">
-          <span className="brand-mark">learn-dbt</span>
-          <span className="brand-sub">interactive dbt tutorial</span>
-        </div>
-        <div className="level-meta">
-          <span className="level-seq">{level.sequence}</span>
-          <span className="level-name">{level.name}</span>
-          <span className="level-cmds">
-            cmds {project.commandCount}
-            {par ? ` / par ${par}` : ''}
+      <Toolbar
+        levelTitle={level.name}
+        levelSeq={level.sequence}
+        cmds={project.commandCount}
+        par={par}
+        onLevels={() => setSession((s) => ({ ...s, showLevels: true }))}
+        onGuide={() => {
+          document.querySelector('.guide-panel')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          document.querySelector('.guide-panel')?.classList.add('is-flash');
+          window.setTimeout(() => {
+            document.querySelector('.guide-panel')?.classList.remove('is-flash');
+          }, 1200);
+        }}
+        onHint={() => onRun('hint')}
+        onSolution={() => onRun('show solution')}
+        onUndo={() => onRun('undo')}
+        onReset={() => onRun('reset')}
+        onSandbox={() => loadLevel('sandbox')}
+        onHelp={() => setSession((s) => ({ ...s, showHelp: true }))}
+        onLocaleChange={() => setLocaleTick((n: number) => n + 1)}
+      />
+      {level.timeLimitSec ? (
+        <div className="timer-row">
+          <span className={`timer-chip${timerSec <= 30 ? ' is-low' : ''}`}>
+            {Math.floor(timerSec / 60)}:{String(timerSec % 60).padStart(2, '0')}
           </span>
-          {level.timeLimitSec ? (
-            <span className={`timer-chip${timerSec <= 30 ? ' is-low' : ''}`}>
-              ⏱ {Math.floor(timerSec / 60)}:{String(timerSec % 60).padStart(2, '0')}
-            </span>
-          ) : null}
         </div>
-        <div className="top-actions">
-          <button type="button" className="btn" onClick={() => loadLevel('sandbox')}>
-            Sandbox
-          </button>
-          <button type="button" className="btn" onClick={() => setSession((s) => ({ ...s, showLevels: true }))}>
-            Levels
-          </button>
-          <button type="button" className="btn" onClick={() => onRun('hint')}>
-            Hint
-          </button>
-          <button type="button" className="btn" onClick={() => onRun('steps')}>
-            Goal
-          </button>
-          <button type="button" className="btn" onClick={() => onRun('reset')}>
-            Reset
-          </button>
-        </div>
-      </header>
+      ) : null}
 
       <div className="workspace">
         <main className={`canvas-panel${session.solved ? ' is-celebrating' : ''}`}>
@@ -418,7 +418,7 @@ export function App() {
 
         <aside className="side-panel guide-panel">
           <section className="side-block">
-            <h2>You are learning</h2>
+            <h2>{ui().youAreLearning}</h2>
             <p>{level.objective}</p>
             {level.learning?.length ? (
               <ul className="learn-list">
@@ -430,14 +430,14 @@ export function App() {
           </section>
           {level.solution.length ? (
             <section className="side-block">
-              <h2>Goal — solution steps</h2>
+              <h2>{ui().checklist}</h2>
               <ol className="sol-steps">
                 {steps.map((s, i) => (
                   <li
                     key={`${s.command}-${i}`}
                     className={`${s.done ? 'is-done' : ''}${i === currentIdx && !s.done ? ' is-current' : ''}`}
                   >
-                    {i === currentIdx && !s.done ? <span className="now-chip">now</span> : null}
+                    {i === currentIdx && !s.done ? <span className="now-chip">{ui().nowChip}</span> : null}
                     <code>{s.command}</code>
                     <span className="step-note">{s.note}</span>
                   </li>
@@ -451,13 +451,13 @@ export function App() {
             </section>
           ) : (
             <section className="side-block">
-              <h2>Sandbox</h2>
+              <h2>{ui().sandbox}</h2>
               <p className="coach-line">{coach ?? 'Type `help` for commands.'}</p>
             </section>
           )}
           {session.showHint ? (
             <section className="side-block">
-              <h2>Hint</h2>
+              <h2>{ui().hintLabel}</h2>
               <p className="mono">{level.hint}</p>
             </section>
           ) : null}
@@ -467,15 +467,11 @@ export function App() {
             </section>
           ) : null}
           <section className="side-block">
-            <h2>Companion — SQL craft</h2>
-            <p className="field-note">
-              Full SQL writing (joins, windows, query craft) is the companion course{' '}
-              <strong>learn-sql</strong> (Projects/learn-sql). Here SQL only appears where it
-              carries dbt structure: ref(), grain, incremental filters.
-            </p>
+            <h2>{ui().companionSql}</h2>
+            <p className="field-note">{ui().companionSqlBody}</p>
           </section>
           <section className="side-block">
-            <h2>Field notes</h2>
+            <h2>{ui().fieldNotes}</h2>
             <p className="field-note">
               {level.fieldNotes?.length
                 ? level.fieldNotes.join('\n\n')
@@ -525,6 +521,15 @@ export function App() {
             </button>
           </div>
         </div>
+      ) : null}
+
+      {session.showHelp ? (
+        <HelpModal
+          onClose={() => {
+            setSession((s) => ({ ...s, showHelp: false }));
+            requestAnimationFrame(() => document.getElementById('term-input')?.focus());
+          }}
+        />
       ) : null}
 
       {session.showLevels ? (
