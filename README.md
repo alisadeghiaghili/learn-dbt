@@ -125,6 +125,7 @@ Goal fields: `built` / `builtMode` (`exactly` | `atLeast` | `none`),
 | Compile fidelity | contracts vs SQL columns; declared interface must exist |
 | Data-level tests | unique/not_null/relationships evaluate rows — they fail on bad data |
 | Legacy mega repo | 100+ models with naming/layer violations to find and fix |
+| SQL transfer | write real SQL; `scoresql` structural rubric; `dbt compile` evals rows |
 
 Authoring commands (`new model`, `edit model`, `add test`, `set config`, `macro`, `deps`, `exposure`, `diagnose`, `ci save/restore`, `warehouse`, `audit`, `quiz`, `review`) mirror real dbt workflows in the simulator.
 

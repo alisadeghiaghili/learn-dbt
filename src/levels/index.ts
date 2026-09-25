@@ -4,7 +4,13 @@ import { testingLevels } from './packs/testing';
 import { jinjaLevels, modelingLevels } from './packs/jinja-modeling';
 import { advancedJinjaLevels, assessmentLevels, incidentLevels } from './packs/advanced';
 import { designLevels, examLevels, warehouseLevels } from './packs/warehouse-design';
-import { fidelityLevels, legacyLevels, megaLevels, quizLevels } from './packs/mega-quiz';
+import {
+  fidelityLevels,
+  legacyLevels,
+  megaLevels,
+  quizLevels,
+  transferSqlLevels,
+} from './packs/mega-quiz';
 
 /** Shared e-commerce demo warehouse used by intro + selection levels. */
 export function demoShopSpec(): ProjectSpec {
@@ -536,6 +542,7 @@ export const allLevels: LevelDef[] = [
   ...quizLevels,
   ...fidelityLevels,
   ...legacyLevels,
+  ...transferSqlLevels,
 ].map((l) => ({
   ...l,
   ...(levelCoaching[l.id] ?? {}),
@@ -624,6 +631,11 @@ export const sequences: { id: string; title: string; about: string }[] = [
     id: 'fidelity',
     title: 'Compile fidelity',
     about: 'Contracts vs SQL columns; declared interface must exist in the body.',
+  },
+  {
+    id: 'transfer',
+    title: 'SQL transfer',
+    about: 'Write real SQL; structural rubric + row evaluation on compile.',
   },
 ];
 

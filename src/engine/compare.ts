@@ -307,11 +307,12 @@ export function evaluateGoal(project: ProjectState, goal: GoalSpec): GoalEvaluat
   }
   if (goal.minTransferScore != null) {
     const layers = new Set(Object.values(project.nodes).map((n) => n.layer));
-    let score = 0;
-    if (layers.has('staging')) score += 30;
-    if (layers.has('intermediate')) score += 25;
-    if (layers.has('mart')) score += 30;
-    if (Object.values(project.nodes).some((n) => n.refs.length > 0)) score += 15;
+    let layerScore = 0;
+    if (layers.has('staging')) layerScore += 30;
+    if (layers.has('intermediate')) layerScore += 25;
+    if (layers.has('mart')) layerScore += 30;
+    if (Object.values(project.nodes).some((n) => n.refs.length > 0)) layerScore += 15;
+    const score = Math.max(layerScore, project.transferScore ?? 0);
     if (score < goal.minTransferScore) {
       reasons.push(`transfer score ${score} < ${goal.minTransferScore}`);
     }

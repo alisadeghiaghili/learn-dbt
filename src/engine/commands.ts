@@ -20,6 +20,7 @@ import { ciRestore, ciSave, diagnose } from './ci';
 import { runAudit } from './audit';
 import { dueForReview, gradeQuiz, reviewQueue } from './quiz';
 import { ensureRows, evaluateTestOnRows, seedRowsFor } from './data';
+import { evalSql, scoreSqlTransfer } from './evalSql';
 
 export interface CommandResult {
   project: ProjectState;
@@ -173,7 +174,8 @@ export function executeCommand(
     head === 'warehouse' ||
     head === 'audit' ||
     head === 'quiz' ||
-    head === 'review'
+    head === 'review' ||
+    head === 'scoresql'
   ) {
     return authoringCommand(trimmed, project, levelGoal);
   }
@@ -216,10 +218,30 @@ export function executeCommand(
       ? resolveSelection(select, exclude, next)
       : Object.keys(next.nodes).sort();
     const modelIds = ids.filter((id) => next.nodes[id]);
+    const relations: Record<string, ReturnType<typeof seedRowsFor>> = {};
+    for (const [id, rows] of Object.entries(next.modelRows ?? {})) {
+      relations[id] = rows;
+    }
     for (const id of modelIds) {
       const n = next.nodes[id]!;
+      ensureRows(next, id);
+      relations[id] = next.modelRows![id]!;
       const compiled = compileSql(n.sql ?? '', next.vars, next.target);
+      const evaled = evalSql(compiled, relations);
       logs.push(log('out', `compiled ${id}\n${compiled}`));
+      if (evaled.error) {
+        logs.push(log('err', `eval ${id}: ${evaled.error}`));
+      } else {
+        logs.push(
+          log(
+            'ok',
+            `eval ${id}: ${evaled.rows.length} row(s), cols=[${evaled.columns.join(', ')}]`,
+          ),
+        );
+        if (evaled.rows[0]) {
+          logs.push(log('out', JSON.stringify(evaled.rows[0])));
+        }
+      }
     }
     next.lastSelection = modelIds;
     return complete(next, logs, { counts: true, levelGoal });
@@ -545,7 +567,58 @@ function authoringCommand(
     for (const item of q) {
       logs.push(log('out', `${item.id}: ${item.q}`));
     }
-    logs.push(log('meta', 'Re-try with `quiz <id> <n>`. Due items resurface after ~24h.'));
+    logs.push(log('meta', 'Re-try with `quiz <id> <n>`. Intervals: 1d / 3d / 7d after hits.'));
+    return complete(next, logs, { counts: true, levelGoal });
+  }
+
+  if (head === 'scoresql') {
+    // scoresql <model> — structural grade of the model SQL
+    const modelId = tokens[1];
+    if (!modelId || !next.nodes[modelId]) {
+      logs.push(log('err', 'usage: scoresql <model>'));
+      return complete(next, logs, { counts: false });
+    }
+    const sql = next.nodes[modelId]!.sql ?? '';
+    const result = scoreSqlTransfer(sql, [
+      {
+        id: 'ref',
+        label: 'uses ref() or source()',
+        test: (s) => /\{\{\s*(ref|source)\s*\(/.test(s),
+        points: 30,
+      },
+      {
+        id: 'select',
+        label: 'has SELECT list',
+        test: (s) => /\bselect\b/i.test(s),
+        points: 20,
+      },
+      {
+        id: 'filter',
+        label: 'has WHERE or JOIN',
+        test: (s) => /\b(where|join)\b/i.test(s),
+        points: 20,
+      },
+      {
+        id: 'grain_col',
+        label: 'mentions a grain column (id/_id)',
+        test: (s) => /\b\w+_id\b|\bid\b/i.test(s),
+        points: 15,
+      },
+      {
+        id: 'clean',
+        label: 'no SELECT * only',
+        test: (s) => !/select\s+\*\s+from\s+\{\{\s*ref/i.test(s.trim()) || s.length > 40,
+        points: 15,
+      },
+    ]);
+    next.transferScore = result.score;
+    logs.push(log('meta', `sql transfer score: ${result.score}/${result.max}`));
+    for (const h of result.hits) {
+      logs.push(log(h.hit ? 'ok' : 'out', `${h.hit ? '✓' : '○'} ${h.label} (${h.points})`));
+    }
+    if (result.missing.length) {
+      logs.push(log('out', `missing: ${result.missing.join(', ')}`));
+    }
     return complete(next, logs, { counts: true, levelGoal });
   }
 

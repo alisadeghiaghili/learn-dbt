@@ -397,18 +397,92 @@ export function reviewQueue(bank: QuizItem[] = quizBank): QuizItem[] {
 }
 
 /**
- * Items due for retrieval practice (missed, or not seen in 1+ days).
+ * Items due for retrieval practice.
+ * Schedule: miss → due immediately; clean items on a 1d/3d/7d ladder.
  */
 export function dueForReview(bank: QuizItem[] = quizBank): QuizItem[] {
   const st = loadReview();
   const now = Date.now();
   const day = 86400000;
   return reviewQueue(bank).filter((q) => {
-    const seen = st.seenAt[q.id] ?? 0;
     const miss = st.misses[q.id] ?? 0;
-    return miss > 0 || !seen || now - seen > day;
+    const seen = st.seenAt[q.id] ?? 0;
+    if (miss > 0) return true;
+    if (!seen) return true;
+    const interval = 3 * day;
+    return now - seen > interval;
   });
 }
+
+/** Full quiz bank including extra advanced items. */
+export const extendedQuizBank: QuizItem[] = [
+  ...quizBank,
+  {
+    id: 'q_microbatch',
+    topic: 'incremental',
+    q: 'microbatch incremental is best for…',
+    choices: [
+      'Tiny lookup tables',
+      'Time-sliced fact loads that can be retried per batch',
+      'Snapshots',
+      'Views',
+    ],
+    answer: 1,
+    why: 'Microbatch isolates failure to a time slice — good for huge event tables.',
+  },
+  {
+    id: 'q_materialized_view',
+    topic: 'materializations',
+    q: 'materialized_view sits between view and table because…',
+    choices: [
+      'It is a macro',
+      'The warehouse refreshes it for you — cheaper than table rebuilds, fresher than stale tables',
+      'It replaces tests',
+      'It is a seed',
+    ],
+    answer: 1,
+    why: 'Warehouse-managed refresh. Check your platform support.',
+  },
+  {
+    id: 'q_source_freshness_slai',
+    topic: 'freshness',
+    q: 'Source freshness thresholds should come from…',
+    choices: [
+      'Whatever the default is',
+      'The business SLA of that feed',
+      'The size of the table',
+      'The number of models',
+    ],
+    answer: 1,
+    why: 'SLA is the contract with producers.',
+  },
+  {
+    id: 'q_exposure_maturity',
+    topic: 'exposures',
+    q: 'exposure maturity signals…',
+    choices: [
+      'How expensive the mart is',
+      'How stable/important the consumer is (low/medium/high)',
+      'The warehouse type',
+      'The test severity',
+    ],
+    answer: 1,
+    why: 'High maturity consumers need stronger SLIs and ownership.',
+  },
+  {
+    id: 'q_explain_ref',
+    topic: 'interview',
+    q: 'Best interview answer for “what is ref()?” is closest to…',
+    choices: [
+      'A SQL function that copies tables',
+      'A dependency declaration that enables lineage, renaming, and env-specific schemas',
+      'A way to run tests',
+      'A Jinja loop',
+    ],
+    answer: 1,
+    why: 'Senior answers mention the DAG and portability, not just syntax.',
+  },
+];
 
 /**
  * Grade a quiz answer.

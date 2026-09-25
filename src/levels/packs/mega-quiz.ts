@@ -582,3 +582,72 @@ export const fidelityLevels: LevelDef[] = [
     ],
   },
 ];
+
+/** Transfer: write real SQL and score it. */
+export const transferSqlLevels: LevelDef[] = [
+  {
+    id: 'transfer_write_mart',
+    sequence: 'transfer',
+    name: 'TRANSFER: write a fact SQL',
+    objective:
+      'Write SQL for `fct_orders` that:\n' +
+      '1) uses `ref()`\n2) has a SELECT list\n3) filters with WHERE\n4) mentions `order_id`\n\n' +
+      'Then `scoresql fct_orders` — need ≥ 80/100.',
+    hint: 'edit model fct_orders sql=… then scoresql fct_orders',
+    solution: [
+      "edit model fct_orders sql=select order_id, amount from {{ ref('stg_orders') }} where amount > 0 ref=stg_orders",
+      'scoresql fct_orders',
+    ],
+    start: {
+      nodes: [
+        { id: 'stg_orders', layer: 'staging', materialization: 'view', sourceRefs: [] },
+        {
+          id: 'fct_orders',
+          layer: 'mart',
+          materialization: 'table',
+          refs: ['stg_orders'],
+          sql: 'select * from x',
+        },
+      ],
+    },
+    goal: {
+      minTransferScore: 80,
+      sqlColumns: { fct_orders: ['order_id'] },
+      mustRunCommand: 'scoresql',
+    },
+    learning: [
+      'Grain columns and filters are part of the interface, not style.',
+      'scoresql is the structural rubric for free-form SQL.',
+    ],
+  },
+  {
+    id: 'transfer_eval_rows',
+    sequence: 'transfer',
+    name: 'TRANSFER: compile evaluates rows',
+    objective:
+      'Write SQL with `count(*)` and run `dbt compile`.\n\n' +
+      'Compile **evaluates** the SQL against fixture rows and prints row counts.',
+    hint: 'edit sql with count then dbt compile',
+    solution: [
+      "edit model fct_orders sql=select count(*) as cnt from {{ ref('stg_orders') }} ref=stg_orders",
+      'dbt compile',
+    ],
+    start: {
+      nodes: [
+        { id: 'stg_orders', layer: 'staging', materialization: 'view', sourceRefs: [] },
+        {
+          id: 'fct_orders',
+          layer: 'mart',
+          materialization: 'table',
+          refs: ['stg_orders'],
+          sql: 'select 1',
+        },
+      ],
+    },
+    goal: {
+      sqlContains: { fct_orders: 'count' },
+      mustRunCommand: 'compile',
+    },
+    learning: ['Authenticity: compile is not a printer — it executes against fixtures.'],
+  },
+];
