@@ -58,5 +58,25 @@ export const fa: Catalog = {
     levelSolved: 'مرحله حل شد',
     inCommand: (n) => `در ${n} دستور`,
     githubTitle: 'مخزن گیت‌هاب',
+    welcomeTitle: 'learn-dbt',
+    welcomeIntro: 'آموزش تعاملی **dbt** — محیط آزاد + مراحل هدایت‌شده.',
+    welcomeBoard: 'صفحه **Sources → Staging → Marts** را نشان می‌دهد؛ همان DAG که dbt می‌سازد.',
+    welcomeTracks:
+      '- مقدمات: `dbt ls`, `dbt run`, `+model`, `@model`\n- انتخاب: `tag:`, `path:`, `source:`, `status:modified+`\n- کیفیت: `dbt build`, unique / not_null, contracts\n- حرفه‌ای: incremental, Jinja, incident, slim CI',
+    welcomeMeta: 'فرمان‌ها: `levels`, `hint`, `steps`, `why`, `show solution`, `quiz`, `review`.',
+    welcomeLevelsCount: (n: number) =>
+      `**${n}** مرحله داری. از Levels شروع کن یا در محیط آزاد بمان.`,
+    welcomeWhat: '**learn-dbt چیست؟**',
+    welcomeWhatBody:
+      'آزمایشگاه مرورگری dbt: دستورهای `dbt` را می‌زنی و DAG، materialization و تست‌ها را می‌بینی. برای هسته‌ی آموزش نیازی به warehouse نیست. نوشتن عمیق SQL در **learn-sql**.',
+    welcomePublisher: '**ناشر**',
+    welcomePublisherBody:
+      'انتشار و نگهداری: **Ali Sadeghi Aghili** — برنامه‌نویس، data engineer / scientist، ML engineer. [linktr.ee/aliaghili](https://linktr.ee/aliaghili)',
+    welcomeGithub:
+      '- [GitHub — سورس و ایشو](https://github.com/alisadeghiaghili/learn-dbt)',
+    welcomeCoffee: 'Buy Me a Coffee (حمایت از ناشر):',
+    welcomeToolbar: 'نوار ابزار: **Guide** · **Hint** · **Solution** · **Levels** · **Help** · **GitHub**.',
+    openLevels: 'باز کردن مرحله‌ها',
+    useIt: 'استفاده:',
   },
 };

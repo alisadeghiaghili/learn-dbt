@@ -267,6 +267,36 @@ body {
   margin: 0 0 16px;
 }
 
+.welcome-card {
+  max-width: 720px;
+}
+
+.welcome-body h3 {
+  margin: 16px 0 6px;
+  font-size: 15px;
+}
+
+.welcome-tracks {
+  margin: 8px 0 12px 18px;
+  padding: 0;
+}
+
+.welcome-tracks li {
+  margin-bottom: 6px;
+  font-family: var(--mono);
+  font-size: 12px;
+}
+
+.welcome-meta {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.welcome-body a {
+  color: var(--source);
+}
+
 /* stack toolbar on small screens */
 @media (max-width: 860px) {
   .toolbar {

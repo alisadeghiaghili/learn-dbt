@@ -30,8 +30,18 @@ import { levelIdFromSearch, markLevelSolved } from './share';
 import { initLocale, ui } from '../i18n';
 import { Toolbar } from './Toolbar';
 import { HelpModal } from './HelpModal';
+import { WelcomeDialog } from './WelcomeDialog';
 
 initLocale();
+
+function shouldShowWelcome(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    return !new URLSearchParams(window.location.search).has('NODEMO');
+  } catch {
+    return true;
+  }
+}
 
 type Mode = 'sandbox' | 'level';
 
@@ -45,6 +55,7 @@ interface Session {
   showLevels: boolean;
   showDialog: boolean;
   showHelp: boolean;
+  showWelcome: boolean;
   solved: SolvedInfo | null;
   undoStack: ProjectState[];
 }
@@ -60,6 +71,7 @@ function startLevelSession(level: LevelDef, restore = true): Session {
     showLevels: false,
     showDialog: Boolean(level.dialog?.length),
     showHelp: false,
+    showWelcome: shouldShowWelcome(),
     solved: null,
     undoStack: [],
   };
@@ -522,6 +534,18 @@ export function App() {
             </button>
           </div>
         </div>
+      ) : null}
+
+      {session.showWelcome ? (
+        <WelcomeDialog
+          onSandbox={() => {
+            setSession((s) => ({ ...s, showWelcome: false }));
+            loadLevel('sandbox');
+          }}
+          onLevels={() => {
+            setSession((s) => ({ ...s, showWelcome: false, showLevels: true }));
+          }}
+        />
       ) : null}
 
       {session.showHelp ? (

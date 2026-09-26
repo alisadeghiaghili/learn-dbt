@@ -58,5 +58,28 @@ export const en: Catalog = {
     levelSolved: 'Level solved',
     inCommand: (n) => `in ${n} command(s)`,
     githubTitle: 'GitHub repository',
+    welcomeTitle: 'learn-dbt',
+    welcomeIntro: 'Interactive **dbt** tutorial — sandbox + guided levels.',
+    welcomeBoard:
+      'The board shows **Sources → Staging → Marts**. That is the model DAG dbt builds.',
+    welcomeTracks:
+      '- Basics: `dbt ls`, `dbt run`, `+model`, `@model`\n- Selection: `tag:`, `path:`, `source:`, `status:modified+`\n- Quality: `dbt build`, unique / not_null, contracts\n- Craft: incremental, Jinja, incidents, slim CI',
+    welcomeMeta:
+      'Meta: `levels`, `hint`, `steps`, `why`, `show solution`, `quiz`, `review`.',
+    welcomeLevelsCount: (n: number) =>
+      `**${n}** levels included. Open Levels to begin, or stay in sandbox.`,
+    welcomeWhat: '**What is learn-dbt?**',
+    welcomeWhatBody:
+      'A browser lab bench for dbt: you type real-shaped `dbt` commands and watch the model DAG, materializations, and tests react. No warehouse install required for the tutorial core. Deep SQL craft lives in **learn-sql**.',
+    welcomePublisher: '**Publisher**',
+    welcomePublisherBody:
+      'Published and maintained by **Ali Sadeghi Aghili** — programmer, data engineer / scientist, ML engineer. [linktr.ee/aliaghili](https://linktr.ee/aliaghili)',
+    welcomeGithub:
+      '- [GitHub — source & issues](https://github.com/alisadeghiaghili/learn-dbt)',
+    welcomeCoffee: 'Buy Me a Coffee (supports the publisher):',
+    welcomeToolbar:
+      'Toolbar: **Guide** · **Hint** · **Solution** · **Levels** · **Help** · **GitHub**.',
+    openLevels: 'Open levels',
+    useIt: 'Use it:',
   },
 };
